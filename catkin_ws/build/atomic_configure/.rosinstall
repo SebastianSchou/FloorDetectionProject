@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/sebastian/Master/git/FloorDetectionProject/catkin_ws/devel/setup.sh

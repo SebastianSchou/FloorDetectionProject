@@ -1,0 +1,6 @@
+<launch>
+  <group ns="project">
+    <node pkg="master_project" type="master_project" name="master_project"/>
+  </group>
+</launch>
+
