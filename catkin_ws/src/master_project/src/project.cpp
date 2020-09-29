@@ -6,6 +6,8 @@
 #include <opencv4/opencv2/opencv.hpp>
 // Ros library
 #include "ros/ros.h"
+// My own helper functions
+#include "master_project/helper_function.hpp"
 
 using namespace cv;
 
