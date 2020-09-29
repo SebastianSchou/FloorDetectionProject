@@ -1,8 +1,0 @@
-prefix=/home/sebastian/Master/git/FloorDetectionProject/catkin_ws/devel
-
-Name: master_project
-Description: Description of master_project
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 
