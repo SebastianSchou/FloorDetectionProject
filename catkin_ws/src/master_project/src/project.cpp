@@ -131,6 +131,15 @@ int main(int argc, char **argv)
       ros::shutdown();
       return EXIT_ERROR;
     }
+
+    // Check if data is valid
+    if (frames == 0) {
+      ROS_ERROR("Camera returned an invalid frame. Exiting script.");
+      ros::shutdown();
+      return EXIT_ERROR;
+    }
+
+    // Get regular color image and align data to depth
     rs2::video_frame colorNormal = frames.get_color_frame();
     frames = align_to_depth.process(frames);
 
