@@ -76,6 +76,12 @@ int main(int argc, char **argv)
   rs2::decimation_filter decimationFilter;
   decimationFilter.set_option(RS2_OPTION_FILTER_MAGNITUDE,
                               DECIMATION_SCALE_FACTIOR);
+  if ((IMAGE_WIDTH_DEPTH % DECIMATION_SCALE_FACTIOR != 0) ||
+      (IMAGE_HEIGHT % DECIMATION_SCALE_FACTIOR != 0)) {
+    ROS_WARN("The image width and/or height are not multiples of the"
+             " decimation scale factor. This can result in errors in shown"
+             " images, but has no effect on the result.");
+  }
 
   // Edge-preserving spatial smoothing
   rs2::spatial_filter spatialFilter;
@@ -98,8 +104,7 @@ int main(int argc, char **argv)
   rs2::align align_to_depth(RS2_STREAM_DEPTH);
   rs2::align align_to_color(RS2_STREAM_COLOR);
 
-  ROS_INFO("Realsense D435 camera initialized.");
-  ROS_INFO("Starting main script.");
+  ROS_INFO("Realsense D435 camera initialized. Starting main script.");
 
   // Allow autoexposure to settle
   try {
@@ -108,15 +113,16 @@ int main(int argc, char **argv)
     }
   } catch (...) {
     ROS_ERROR("Script timed out while waiting for frames (%d ms)."
-              "Exiting script.", CAMERA_TIMEOUT);
+              " Exiting script.", CAMERA_TIMEOUT);
     ros::shutdown();
     return EXIT_ERROR;
   }
 
   // Main loop
-  char key = ' ';
+  float timeSum = 0.0;
+  int   iteration = 0;
+  char  key = ' ';
   while (key != 'q') {
-    // auto start = std::chrono::steady_clock::now();
     // Read camera data
     try {
       frames = pipe.wait_for_frames(CAMERA_TIMEOUT);
@@ -126,7 +132,7 @@ int main(int argc, char **argv)
         ROS_ERROR("Camera has been disconnected. Exiting script.");
       } else {
         ROS_ERROR("Script timed out while waiting for frames (%d ms)."
-                  "Exiting script.", CAMERA_TIMEOUT);
+                  " Exiting script.", CAMERA_TIMEOUT);
       }
       ros::shutdown();
       return EXIT_ERROR;
@@ -138,6 +144,9 @@ int main(int argc, char **argv)
       ros::shutdown();
       return EXIT_ERROR;
     }
+
+    // Record processing time
+    auto start = std::chrono::steady_clock::now();
 
     // Get regular color image and align data to depth
     rs2::video_frame colorNormal = frames.get_color_frame();
@@ -205,10 +214,12 @@ int main(int argc, char **argv)
     imshow("Realsense color normal", colorNormalMat);
     imshow("Realsense IR", irMat);
 
-    // printf("Total: %.3fms\n", HelperFunction::msUntilNow(start));
+    timeSum += msUntilNow(start);
+    iteration++;
     key = waitKey(1);
   }
-  ROS_INFO("Script ended. Shutting down.");
+  ROS_INFO("Script ended. Shutting down. Avg. processing time: %.3f ms",
+           timeSum / (float)iteration);
 
   // Shutdown
   pipe.stop();
