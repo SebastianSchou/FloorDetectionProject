@@ -143,7 +143,9 @@ link_directories(
 add_executable(${PROJECT_NAME}
   src/project.cpp
   src/helper_function.cpp
-  include/${PROJECT_NAME}/helper_function.hpp)
+  src/camera_data.cpp
+  include/${PROJECT_NAME}/helper_function.hpp
+  include/${PROJECT_NAME}/camera_data.hpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
