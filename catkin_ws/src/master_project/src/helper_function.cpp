@@ -1,6 +1,6 @@
 #include "master_project/helper_function.hpp"
 
-float HelperFunction::msUntilNow(
+float msUntilNow(
   const std::chrono::steady_clock::time_point& start)
 {
   return std::chrono::duration_cast<std::chrono::microseconds>(

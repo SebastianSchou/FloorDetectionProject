@@ -3,8 +3,6 @@
 
 #include <chrono>
 
-namespace HelperFunction {
 float msUntilNow(const std::chrono::steady_clock::time_point& start);
-};
 
 #endif // HELPER_FUNCTION_HPP
