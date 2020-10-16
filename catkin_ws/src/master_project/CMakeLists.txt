@@ -144,8 +144,13 @@ add_executable(${PROJECT_NAME}
   src/project.cpp
   src/helper_function.cpp
   src/camera_data.cpp
+  src/quadtree.cpp
+  src/drawing_functions.cpp
   include/${PROJECT_NAME}/helper_function.hpp
-  include/${PROJECT_NAME}/camera_data.hpp)
+  include/${PROJECT_NAME}/camera_data.hpp
+  include/${PROJECT_NAME}/summed_area_table.hpp
+  include/${PROJECT_NAME}/quadtree.hpp
+  include/${PROJECT_NAME}/drawing_functions)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
