@@ -9,19 +9,17 @@ public:
 
   Quadtree();
   ~Quadtree();
-  void                divideIntoQuadrants();
-  void                PCA();
-  std::vector<double> computeMean();
-  cv::Mat             computeCovariance();
-  void                initializeRoot(const CameraData& cameraData);
-  void                setMaxPlaneThickness(const double maxPlaneThickness);
-  const double        getMaxPlaneThickness() const;
-  void                setMinSamplesInNode(const int minSamplesInNode);
-  const int           getMinSamplesInNode() const;
+  void         divideIntoQuadrants();
+  void         PCA();
+  void         computeMean();
+  void         computeCovariance();
+  void         initializeRoot(const CameraData& cameraData);
+  void         setMaxPlaneThickness(const double maxPlaneThickness);
+  const double getMaxPlaneThickness() const;
+  void         setMinSamplesInNode(const int minSamplesInNode);
+  const int    getMinSamplesInNode() const;
 
-
-  std::vector<double> mean;
-  cv::Mat covariance, normal;
+  cv::Mat covariance, normal, mean;
   cv::Point minBounds, maxBounds;
   Quadtree *root, *children;
   int samples, level;
