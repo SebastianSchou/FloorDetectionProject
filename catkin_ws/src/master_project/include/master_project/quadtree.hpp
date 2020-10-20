@@ -14,6 +14,10 @@ public:
   std::vector<double> computeMean();
   cv::Mat             computeCovariance();
   void                initializeRoot(const CameraData& cameraData);
+  void                setMaxPlaneThickness(const double maxPlaneThickness);
+  const double        getMaxPlaneThickness() const;
+  void                setMinSamplesInNode(const int minSamplesInNode);
+  const int           getMinSamplesInNode() const;
 
 
   std::vector<double> mean;
@@ -27,6 +31,11 @@ public:
   std::vector<std::vector<double> > validCoordinates;
   std::vector<std::vector<int> > validPixels;
   bool isPlane;
+
+private:
+
+  double maxPlaneThickness_;
+  int minSamplesInNode_;
 };
 
 #endif // QUADTREE_HPP

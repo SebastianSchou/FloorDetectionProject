@@ -1,13 +1,11 @@
 #include "master_project/quadtree.hpp"
 #include <thread>
 #include <chrono>
-
-#define MIN_SAMPLES 25
+#include <mutex>
 
 // Assuming normal distribution, 95% of the value is within the
 // interval [-1.96, 1.96]
 #define CONFIDENCE_INTERVAL_95_PERCENTAGE 1.96
-#define MAX_PLANE_THICKNESS 0.36
 #define X 0
 #define Y 1
 #define Z 2
@@ -25,6 +23,8 @@ Quadtree::Quadtree()
   samples = 0;
   isPlane = false;
   maxDistance = 0;
+  setMinSamplesInNode(25);
+  setMaxPlaneThickness(0.36);
 }
 
 Quadtree::~Quadtree()
@@ -41,7 +41,7 @@ void Quadtree::divideIntoQuadrants()
 {
   // If there are too few samples in the image to analyze, ignore it
   samples = root->sat.satSamples.getArea(minBounds, maxBounds);
-  if (samples < MIN_SAMPLES) {
+  if (samples < root->getMinSamplesInNode()) {
     root->nonPlanes.push_back(this);
     return;
   }
@@ -51,7 +51,7 @@ void Quadtree::divideIntoQuadrants()
   // Get the thickness of the data within the 95 percentage interval
   areaThickness = CONFIDENCE_INTERVAL_95_PERCENTAGE *
                   std::sqrt(minVariance);
-  if (areaThickness < MAX_PLANE_THICKNESS) {
+  if (areaThickness < root->getMaxPlaneThickness()) {
     isPlane = true;
     root->planes.push_back(this);
     return;
@@ -208,4 +208,26 @@ void Quadtree::initializeRoot(const CameraData& cameraData)
       sat.satSamples.setSumValue(r, c);
     }
   }
+}
+
+void Quadtree::setMaxPlaneThickness(const double maxPlaneThickness)
+{
+  maxPlaneThickness_ = maxPlaneThickness;
+}
+
+const double Quadtree::getMaxPlaneThickness() const
+{
+  std::unique_lock<std::mutex> lck(std::mutex);
+  return maxPlaneThickness_;
+}
+
+void Quadtree::setMinSamplesInNode(const int minSamplesInNode)
+{
+  minSamplesInNode_ = minSamplesInNode;
+}
+
+const int Quadtree::getMinSamplesInNode() const
+{
+  std::unique_lock<std::mutex> lck(std::mutex);
+  return minSamplesInNode_;
 }
