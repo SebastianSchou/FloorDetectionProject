@@ -57,6 +57,9 @@ void Quadtree::divideIntoQuadrants()
     return;
   }
 
+  // Do not split into quadrants if children are below minimum samples size
+  if (samples / 4 < root->getMinSamplesInNode()) {return;}
+
   // Split image into four
   children = new Quadtree[4];
   cv::Point parentCenter(((maxBounds.x - minBounds.x) / 2) + minBounds.x,
