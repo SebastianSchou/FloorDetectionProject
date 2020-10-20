@@ -48,8 +48,10 @@ int main(int argc, char **argv)
     Quadtree root;
     root.initializeRoot(cameraData);
     root.divideIntoQuadrants();
-    DrawingFunctions::drawQuadtreeBorders(cameraData.colorizedDepthImage, root);
-    DrawingFunctions::drawQuadtreeBorders(cameraData.depthAlignedColorImage, root, cameraData);
+    DrawingFunctions::drawQuadtreeBorders(cameraData.colorizedDepthImage,
+                                          root);
+    DrawingFunctions::drawQuadtreeBorders(cameraData.depthAlignedColorImage,
+                                          root, cameraData);
 
     // Accumulator
     // Hough transform
