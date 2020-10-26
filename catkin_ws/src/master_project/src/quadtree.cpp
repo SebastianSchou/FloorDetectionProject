@@ -1,6 +1,5 @@
 #include "master_project/quadtree.hpp"
-#include <thread>
-#include <chrono>
+#include "master_project/helper_function.hpp"
 #include <mutex>
 
 // Assuming normal distribution, 95% of the value is within the
@@ -194,7 +193,8 @@ void Quadtree::initializeRoot(const CameraData& cameraData)
         validCoordinates.push_back(validCoordinate);
         std::vector<int> validPixel { r, c };
         validPixels.push_back(validPixel);
-        maxDistance = std::max(maxDistance, std::sqrt(x * x + y * y + z * z));
+        maxDistance = std::max(maxDistance,
+                               std::sqrt(square(x) + square(y) + square(z)));
       }
 
       // Calculate sum table for this point
