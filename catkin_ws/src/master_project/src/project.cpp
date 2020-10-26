@@ -7,6 +7,8 @@
 #include "master_project/summed_area_table.hpp"
 #include "master_project/quadtree.hpp"
 #include "master_project/camera_data.hpp"
+#include "master_project/accumulator.hpp"
+#include "master_project/voting.hpp"
 #include "master_project/drawing_functions.hpp"
 
 #define EXIT_SUCCESS 0
@@ -48,22 +50,32 @@ int main(int argc, char **argv)
     Quadtree root;
     root.initializeRoot(cameraData);
     root.divideIntoQuadrants();
-    DrawingFunctions::drawQuadtreeBorders(cameraData.colorizedDepthImage,
-                                          root);
-    DrawingFunctions::drawQuadtreeBorders(cameraData.depthAlignedColorImage,
-                                          root, cameraData);
+    Accumulator *accumulator = new Accumulator(root.maxDistance, 80, 30);
+    std::vector<Bin> usedBins;
+    std::vector<Kernel> usedKernels;
+    voting(root, *accumulator, usedBins, usedKernels);
 
     // Accumulator
     // Hough transform
 
+    // Calculate average itteration time
+    timeSum += msUntilNow(start);
+    iteration++;
+
+    // Draw illustrations
+    DrawingFunctions::drawQuadtreeBorders(cameraData.colorizedDepthImage,
+                                          root);
+    DrawingFunctions::drawQuadtreeBorders(cameraData.depthAlignedColorImage,
+                                          root, cameraData);
+    cv::Mat accumDrawing = DrawingFunctions::drawAccumulatorCellVotes(
+      IMAGE_WIDTH_DEPTH, IMAGE_HEIGHT, *accumulator);
+
     // Show data
     cv::imshow("Realsense depth", cameraData.colorizedDepthImage);
+    cv::imshow("Accumulator", accumDrawing);
     cv::imshow("Realsense color", cameraData.depthAlignedColorImage);
     cv::imshow("Realsense color normal", cameraData.normalColorImage);
     cv::imshow("Realsense IR", cameraData.irImage);
-
-    timeSum += msUntilNow(start);
-    iteration++;
     key = cv::waitKey(1);
   }
   ROS_INFO("Script ended. Shutting down. Avg. processing time: %.3f ms",

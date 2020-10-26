@@ -23,6 +23,7 @@ Quadtree::Quadtree()
   samples = 0;
   isPlane = false;
   maxDistance = 0;
+  rootRepresentativeness = 0.0;
   setMinSamplesInNode(25);
   setMaxPlaneThickness(0.36);
 }

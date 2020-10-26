@@ -146,11 +146,18 @@ add_executable(${PROJECT_NAME}
   src/camera_data.cpp
   src/quadtree.cpp
   src/drawing_functions.cpp
+  src/accumulator.cpp
+  src/voting.cpp
   include/${PROJECT_NAME}/helper_function.hpp
   include/${PROJECT_NAME}/camera_data.hpp
   include/${PROJECT_NAME}/summed_area_table.hpp
   include/${PROJECT_NAME}/quadtree.hpp
-  include/${PROJECT_NAME}/drawing_functions)
+  include/${PROJECT_NAME}/drawing_functions.hpp
+  include/${PROJECT_NAME}/accumulator.hpp
+  include/${PROJECT_NAME}/accumulator_cell.hpp
+  include/${PROJECT_NAME}/bin.hpp
+  include/${PROJECT_NAME}/kernel.hpp
+  include/${PROJECT_NAME}/voting.hpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
