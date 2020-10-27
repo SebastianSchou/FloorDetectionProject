@@ -237,7 +237,7 @@ bool vote(std::vector<Bin>& usedBins,
     // Test if the previous vote was smaller than the current
     if (cell.lastVoteCount < votes) {
       // Remove
-      cell.bin += -cell.lastVoteCount + votes;
+      cell.votes += -cell.lastVoteCount + votes;
       cell.lastVoteCount = votes;
     } else {
       return false;
@@ -249,7 +249,7 @@ bool vote(std::vector<Bin>& usedBins,
     cell.lastVoteCount = votes;
 
     // Increment votes
-    cell.bin += votes;
+    cell.votes += votes;
 
     // Add reference of the node that votes for this cell
     cell.addNodeReference(kernel.node);

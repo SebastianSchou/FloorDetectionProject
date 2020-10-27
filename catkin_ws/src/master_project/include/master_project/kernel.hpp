@@ -60,7 +60,7 @@ public:
     // Cluster representativeness
     covarianceSpherical.at<double>(X, X) += NONZERO;
     covarianceSphericalInversed = covarianceSpherical.inv();
-    gaussianPdfConstant = root22pi32 *
+    gaussianPdfConstant = SQRTOFCUBIC2PI *
                           std::sqrt(std::abs(cv::determinant(
                                                covarianceSpherical)));
     cv::Mat eigenvalues, eigenvectors;

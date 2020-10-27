@@ -15,7 +15,7 @@ public:
     top = false;
     voted = false;
     peak = false;
-    bin = 0.0;
+    votes = 0.0;
   }
 
   ~AccumulatorCell()
@@ -30,7 +30,7 @@ public:
   void setAsVotedFor(Quadtree *node)
   {
     lastVotedNote = node;
-    this->bin++;
+    this->votes++;
   }
 
   void addNodeReference(Quadtree *node)
@@ -42,7 +42,7 @@ public:
 
   Quadtree *lastVotedNote;
   bool peak, visited, voted, top;
-  double lastVoteCount, bin;
+  double lastVoteCount, votes;
   double thetaIndex;
   int phiIndex, rhoIndex;
 };

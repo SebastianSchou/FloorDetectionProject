@@ -6,7 +6,7 @@
 
 const double PI = acos(-1);
 const double PI2 = 2.0 * PI;
-static const double root22pi32 = 2.0 * sqrt(2.0) * pow(PI, 1.5);
+static const double SQRTOFCUBIC2PI = 2.0 * sqrt(2.0) * pow(PI, 1.5);
 
 float   msUntilNow(const std::chrono::steady_clock::time_point& start);
 cv::Mat normalizeVector(const cv::Mat& v);

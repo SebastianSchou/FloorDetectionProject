@@ -74,9 +74,9 @@ double Accumulator::convolutionValue(const double thetaIndex,
   std::set<AccumulatorCell *> neighbors = getNeighborCells(thetaIndex, phiIndex,
                                                            rhoIndex, 6);
   AccumulatorCell *center = &at(thetaIndex, phiIndex, rhoIndex);
-  accumulatorValue = center->bin * 0.2002;
+  accumulatorValue = center->votes * 0.2002;
   for (AccumulatorCell *n : neighbors) {
-    accumulatorValue += n->bin * 0.1333;
+    accumulatorValue += n->votes * 0.1333;
   }
   return accumulatorValue;
 }
