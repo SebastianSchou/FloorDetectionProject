@@ -37,8 +37,8 @@ std::set<Quadtree *> Accumulator::convolutionNodes(const double thetaIndex,
                                                    const short  rhoIndex)
 {
   std::set<Quadtree *> nodes;
-  std::set<AccumulatorCell *> neighbors = getNeighbors(thetaIndex, phiIndex,
-                                                       rhoIndex, 26);
+  std::set<AccumulatorCell *> neighbors = getNeighborCells(thetaIndex, phiIndex,
+                                                           rhoIndex, 26);
   for (AccumulatorCell *cell : neighbors) {
     std::move(cell->votedNotes.begin(), cell->votedNotes.end(),
               std::inserter(nodes, nodes.end()));
@@ -49,8 +49,8 @@ std::set<Quadtree *> Accumulator::convolutionNodes(const double thetaIndex,
 void Accumulator::setVisited(const double thetaIndex, const short phiIndex,
                              const short rhoIndex)
 {
-  std::set<AccumulatorCell *> neighbors = getNeighbors(thetaIndex, phiIndex,
-                                                       rhoIndex, 27);
+  std::set<AccumulatorCell *> neighbors = getNeighborCells(thetaIndex, phiIndex,
+                                                           rhoIndex, 27);
   for (AccumulatorCell *cell : neighbors) {
     cell->visited = true;
   }
@@ -71,8 +71,8 @@ double Accumulator::convolutionValue(const double thetaIndex,
 {
   double accumulatorValue = 0.0;
 
-  std::set<AccumulatorCell *> neighbors = getNeighbors(thetaIndex, phiIndex,
-                                                       rhoIndex, 6);
+  std::set<AccumulatorCell *> neighbors = getNeighborCells(thetaIndex, phiIndex,
+                                                           rhoIndex, 6);
   AccumulatorCell *center = &at(thetaIndex, phiIndex, rhoIndex);
   accumulatorValue = center->bin * 0.2002;
   for (AccumulatorCell *n : neighbors) {
@@ -131,10 +131,9 @@ bool Accumulator::processRho(double& thetaIndex, int& phiIndex, int& rhoIndex)
   return true;
 }
 
-std::set<AccumulatorCell *> Accumulator::getNeighbors(const double thetaIndex,
-                                                      const short  phiIndex,
-                                                      const short  rhoIndex,
-                                                      const int    neighborhoodSize)
+std::set<AccumulatorCell *> Accumulator::getNeighborCells(
+  const double thetaIndex, const short phiIndex, const short rhoIndex,
+  const int neighborhoodSize)
 {
   std::set<AccumulatorCell *> result;
 
@@ -147,27 +146,26 @@ std::set<AccumulatorCell *> Accumulator::getNeighbors(const double thetaIndex,
     theta = thetaIndex;
   }
 
-  // center[1] // direct-linked[7] // semi-direct-linked[19] // diagonal-linked[27] /
-  static const short offsetX[26] =
-  { 0,   0,  0,  0, +1, -1, +1, -1, +1, -1, +1, -1, -1, +1, 0, 0, 0, 0, +1,
-    +1,
-    +1, -1, +1, -1, -1, -1, };
-  static const short offsetY[26] =
-  { +1, -1,  0,  0,  0,  0, +1, -1, -1, +1, 0, 0, 0, 0, +1, -1, -1, +1, +1,
-    +1,
-    -1, +1, -1, -1, +1, -1, };
-  static const short offsetZ[26] =
-  { 0,   0, +1, -1,  0,  0, 0, 0, 0, 0, +1, -1, +1, -1, +1, -1, +1, -1, +1,
-    -1,
-    +1, +1, -1, +1, -1, -1, };
+  static const short neighborOffsetTheta[26] =
+  { 0,   0,  0,  0, +1, -1,                         // directly linked
+    +1, -1, +1, -1, +1, -1, -1, +1, 0, 0, 0, 0,     // semi directly linked
+    +1, +1, +1, -1, +1, -1, -1, -1 };               // diagonally linked
+  static const short neighborOffsetPhi[26] =
+  { +1, -1,  0,  0,  0,  0,                         // directly linked
+    +1, -1, -1, +1,  0,  0,  0, 0, +1, -1, -1, +1,  // semi directly linked
+    +1, +1, -1, +1, -1, -1, +1, -1 };               // diagonally linked
+  static const short neighborOffsetRho[26] =
+  { 0,   0, +1, -1,  0,  0,                         // directly linked
+    0,   0,  0,  0, +1, -1, +1, -1, +1, -1, +1, -1, // semi directly linked
+    +1, -1, +1, +1, -1, +1, -1, -1 };               // diagonally linked
 
-  for (short i = 1; i != neighborhoodSize; ++i) {
+  for (short i = 0; i < neighborhoodSize; ++i) {
     t = theta;
-    p = phiIndex + offsetY[i];
-    r = rhoIndex + offsetZ[i];
+    p = phiIndex + neighborOffsetPhi[i];
+    r = rhoIndex + neighborOffsetRho[i];
     processPhi(t, p);
     t = fixTheta(t, p);
-    t += (deltaThetaIndex(p) * (double)((offsetX[i])));
+    t += (deltaThetaIndex(p) * (double)((neighborOffsetTheta[i])));
 
     if (!processIndexLimits(t, p, r)) {
       continue;

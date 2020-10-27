@@ -17,10 +17,10 @@ public:
   std::set<Quadtree *>        convolutionNodes(const double thetaIndex,
                                                const short  phiIndex,
                                                const short  rhoIndex);
-  std::set<AccumulatorCell *> getNeighbors(const double thetaIndex,
-                                           const short  phiIndex,
-                                           const short  rhoIndex,
-                                           const int    neighborhoodSize);
+  std::set<AccumulatorCell *> getNeighborCells(const double thetaIndex,
+                                               const short  phiIndex,
+                                               const short  rhoIndex,
+                                               const int    neighborhoodSize);
   AccumulatorCell& at(const double theta,
                       const short  phi,
                       const short  rho);
