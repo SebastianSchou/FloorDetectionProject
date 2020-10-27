@@ -58,7 +58,9 @@ void Quadtree::divideIntoQuadrants()
   }
 
   // Do not split into quadrants if children are below minimum samples size
-  if (samples / 4 < root->getMinSamplesInNode()) {return;}
+  if (samples / 4 < root->getMinSamplesInNode()) {
+    return;
+  }
 
   // Split image into four
   children = new Quadtree[4];

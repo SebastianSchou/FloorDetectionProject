@@ -27,6 +27,7 @@ void computeKernel(Quadtree           & node,
 {
   // Init kernel
   Kernel kernel;
+
   kernel.node = &node;
 
   // Make certain that rho, the distance from plane to camera center,
@@ -146,13 +147,13 @@ void gaussianVoting2d(Accumulator     & accum,
 
 // Voting in 1 dimensions (rho)
 bool gaussianVoting1d(Accumulator     & accum,
-                             Kernel          & kernel,
-                             std::vector<Bin>& usedBins,
-                             const double      thetaIndex,
-                             const int         phiIndex,
-                             const int         rhoIndexStart,
-                             const double      theta,
-                             const double      phi)
+                      Kernel          & kernel,
+                      std::vector<Bin>& usedBins,
+                      const double      thetaIndex,
+                      const int         phiIndex,
+                      const int         rhoIndexStart,
+                      const double      theta,
+                      const double      phi)
 {
   int rhoIndex, p, rhoIndexIncrement;
   double rho, t, rhoIncrement, gauss, votes;
@@ -219,13 +220,13 @@ bool gaussianVoting1d(Accumulator     & accum,
 }
 
 bool vote(std::vector<Bin>& usedBins,
-                 AccumulatorCell & cell,
-                 Kernel          & kernel,
-                 double            votes,
-                 double            t,
-                 int               p,
-                 int               r,
-                 Accumulator     & accum)
+          AccumulatorCell & cell,
+          Kernel          & kernel,
+          double            votes,
+          double            t,
+          int               p,
+          int               r,
+          Accumulator     & accum)
 {
   // Cluster representativeness
   votes = votes * kernel.node->rootRepresentativeness;

@@ -25,5 +25,5 @@ cv::Mat normalizeVector(const cv::Mat& v)
 
 double square(const double v)
 {
-  return (v * v);
+  return v * v;
 }

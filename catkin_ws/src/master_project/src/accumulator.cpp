@@ -149,17 +149,17 @@ std::set<AccumulatorCell *> Accumulator::getNeighbors(const double thetaIndex,
 
   // center[1] // direct-linked[7] // semi-direct-linked[19] // diagonal-linked[27] /
   static const short offsetX[26] =
-  { 0,    0,  0,  0, +1, -1, +1, -1, +1, -1, +1, -1, -1, +1, 0, 0, 0, 0, +1,
+  { 0,   0,  0,  0, +1, -1, +1, -1, +1, -1, +1, -1, -1, +1, 0, 0, 0, 0, +1,
     +1,
-    +1,  -1, +1, -1, -1, -1, };
+    +1, -1, +1, -1, -1, -1, };
   static const short offsetY[26] =
   { +1, -1,  0,  0,  0,  0, +1, -1, -1, +1, 0, 0, 0, 0, +1, -1, -1, +1, +1,
     +1,
     -1, +1, -1, -1, +1, -1, };
   static const short offsetZ[26] =
-  { 0,    0, +1, -1,  0,  0, 0, 0, 0, 0, +1, -1, +1, -1, +1, -1, +1, -1, +1,
+  { 0,   0, +1, -1,  0,  0, 0, 0, 0, 0, +1, -1, +1, -1, +1, -1, +1, -1, +1,
     -1,
-    +1,  +1, -1, +1, -1, -1, };
+    +1, +1, -1, +1, -1, -1, };
 
   for (short i = 1; i != neighborhoodSize; ++i) {
     t = theta;
