@@ -101,3 +101,29 @@ cv::Mat DrawingFunctions::drawAccumulatorCellVotes(const int          height,
 
   return accumDrawing;
 }
+
+void DrawingFunctions::drawPlanesInQuadtree(cv::Mat   & image,
+                                            Quadtree  & node,
+                                            CameraData& cameraData)
+{
+  if (node.isPlane) {
+    cv::Mat rect(image.rows, image.cols, CV_8UC3, cv::Scalar::all(0));
+    double  r = node.color.at<uchar>(0), g = node.color.at<uchar>(1),
+            b = node.color.at<uchar>(2);
+
+    cv::rectangle(rect,
+                  node.minBounds * cameraData.filterVariables.decimationScaleFactor,
+                  node.maxBounds * cameraData.filterVariables.decimationScaleFactor,
+                  cv::Scalar(r, g, b), cv::FILLED);
+    cv::addWeighted(image, 1.0, rect, 0.5, 0.0, image);
+  }
+  cv::rectangle(image,
+                node.minBounds * cameraData.filterVariables.decimationScaleFactor,
+                node.maxBounds * cameraData.filterVariables.decimationScaleFactor,
+                cv::Scalar(255, 0, 0), 1);
+  if (node.children != NULL) {
+    for (int i = 0; i < 4; i++) {
+      drawPlanesInQuadtree(image, node.children[i], cameraData);
+    }
+  }
+}

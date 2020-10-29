@@ -13,6 +13,8 @@ void    drawQuadtreeBorders(cv::Mat& image, Quadtree& node);
 cv::Mat drawAccumulatorCellVotes(const int height, const int width,
                                  const Accumulator& accumulator,
                                  const int minRho = 0, const int maxRho = 0);
+void    drawPlanesInQuadtree(cv::Mat& image, Quadtree& node,
+                             CameraData& cameraData);
 };
 
 #endif // DRAWING_FUNCTIONS_HPP

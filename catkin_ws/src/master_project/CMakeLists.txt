@@ -157,7 +157,10 @@ add_executable(${PROJECT_NAME}
   include/${PROJECT_NAME}/accumulator_cell.hpp
   include/${PROJECT_NAME}/bin.hpp
   include/${PROJECT_NAME}/kernel.hpp
-  include/${PROJECT_NAME}/voting.hpp)
+  include/${PROJECT_NAME}/voting.hpp
+  include/${PROJECT_NAME}/plane.hpp
+  include/${PROJECT_NAME}/peak_detection.hpp
+  include/${PROJECT_NAME}/hough_plane_transform.hpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

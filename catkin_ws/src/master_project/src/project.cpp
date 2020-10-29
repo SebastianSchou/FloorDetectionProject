@@ -1,15 +1,9 @@
 #include <stdio.h>
-#include <algorithm>
-#include <math.h>
 #include <librealsense2/rs.hpp>
 #include <opencv4/opencv2/core/ocl.hpp>
-#include "master_project/helper_function.hpp"
-#include "master_project/summed_area_table.hpp"
-#include "master_project/quadtree.hpp"
-#include "master_project/camera_data.hpp"
-#include "master_project/accumulator.hpp"
-#include "master_project/voting.hpp"
 #include "master_project/drawing_functions.hpp"
+#include "master_project/hough_plane_transform.hpp"
+
 
 #define EXIT_SUCCESS 0
 #define EXIT_ERROR -1
@@ -44,19 +38,8 @@ int main(int argc, char **argv)
       return EXIT_ERROR;
     }
 
-    // Data extraction from matrices should be in the form (row, col)
-    // unless otherwise stated. This means that points (x, y) are (col, row).
-
-    Quadtree root;
-    root.initializeRoot(cameraData);
-    root.divideIntoQuadrants();
-    Accumulator *accumulator = new Accumulator(root.maxDistance, 80, 30);
-    std::vector<Bin> usedBins;
-    std::vector<Kernel> usedKernels;
-    voting(root, *accumulator, usedBins, usedKernels);
-
-    // Accumulator
-    // Hough transform
+    HoughPlaneTransform houghPlaneTransform(cameraData);
+    std::vector<Plane> planes = houghPlaneTransform.planes;
 
     // Calculate average itteration time
     timeSum += msUntilNow(start);
@@ -64,11 +47,13 @@ int main(int argc, char **argv)
 
     // Draw illustrations
     DrawingFunctions::drawQuadtreeBorders(cameraData.colorizedDepthImage,
-                                          root);
-    DrawingFunctions::drawQuadtreeBorders(cameraData.depthAlignedColorImage,
-                                          root, cameraData);
+                                          houghPlaneTransform.root);
+    houghPlaneTransform.assignColorToPlanes();
+    DrawingFunctions::drawPlanesInQuadtree(cameraData.depthAlignedColorImage,
+                                           houghPlaneTransform.root,
+                                           cameraData);
     cv::Mat accumDrawing = DrawingFunctions::drawAccumulatorCellVotes(
-      IMAGE_WIDTH_DEPTH, IMAGE_HEIGHT, *accumulator);
+      IMAGE_WIDTH_DEPTH, IMAGE_HEIGHT, *houghPlaneTransform.accumulator);
 
     // Show data
     cv::imshow("Realsense depth", cameraData.colorizedDepthImage);

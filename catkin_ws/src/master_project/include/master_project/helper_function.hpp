@@ -11,5 +11,6 @@ static const double SQRTOFCUBIC2PI = 2.0 * sqrt(2.0) * pow(PI, 1.5);
 float   msUntilNow(const std::chrono::steady_clock::time_point& start);
 cv::Mat normalizeVector(const cv::Mat& v);
 double  square(const double v);
+bool    isMatEqual(const cv::Mat m1, const cv::Mat m2);
 
 #endif // HELPER_FUNCTION_HPP

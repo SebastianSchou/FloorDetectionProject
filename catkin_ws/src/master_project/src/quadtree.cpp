@@ -17,6 +17,7 @@ Quadtree::Quadtree()
   mean = cv::Mat::zeros(3, 1, CV_64F);
   covariance = cv::Mat::zeros(3, 3, CV_64F);
   normal = cv::Mat::zeros(3, 1, CV_64F);
+  color = cv::Mat::zeros(3, 1, CV_64F);
   areaThickness = 0;
   minVariance = 0;
   samples = 0;

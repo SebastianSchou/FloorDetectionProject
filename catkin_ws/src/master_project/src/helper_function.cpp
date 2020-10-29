@@ -27,3 +27,18 @@ double square(const double v)
 {
   return v * v;
 }
+
+bool isMatEqual(const cv::Mat m1, const cv::Mat m2)
+{
+  if ((m1.rows != m2.rows) || (m1.cols != m2.cols)) {
+    return false;
+  }
+  for (int r = 0; r < m1.rows; r++) {
+    for (int c = 0; c < m1.cols; c++) {
+      if (m1.at<double>(r, c) != m2.at<double>(r, c)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
