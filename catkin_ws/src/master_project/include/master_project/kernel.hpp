@@ -3,7 +3,6 @@
 
 #include "master_project/helper_function.hpp"
 #include "master_project/quadtree.hpp"
-#include <math.h>
 
 #define X 0
 #define Y 1
@@ -24,7 +23,7 @@ public:
 
   void computeKernelParameters()
   {
-    cv::Mat jacobian = cv::Mat::zeros(3, 3, CV_64F);
+    cv::Mat jacobian = cv::Mat::zeros(cv::Size(3, 3), CV_64F);
 
     cv::Mat n = normalizeVector(node->normal);
 

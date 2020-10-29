@@ -1,6 +1,4 @@
 #include "master_project/voting.hpp"
-#include <ctime>
-#include <limits>
 
 void voting(Quadtree           & root,
             Accumulator        & accumulator,

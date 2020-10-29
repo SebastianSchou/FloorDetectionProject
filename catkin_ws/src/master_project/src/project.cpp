@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <librealsense2/rs.hpp>
 #include <opencv4/opencv2/core/ocl.hpp>
 #include "master_project/drawing_functions.hpp"
 #include "master_project/hough_plane_transform.hpp"
@@ -39,7 +38,7 @@ int main(int argc, char **argv)
     }
 
     HoughPlaneTransform houghPlaneTransform(cameraData);
-    std::vector<Plane> planes = houghPlaneTransform.planes;
+    std::vector<Plane>  planes = houghPlaneTransform.planes;
 
     // Calculate average itteration time
     timeSum += msUntilNow(start);

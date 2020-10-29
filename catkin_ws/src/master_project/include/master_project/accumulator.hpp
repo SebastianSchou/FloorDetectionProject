@@ -4,8 +4,6 @@
 #include "master_project/accumulator_cell.hpp"
 #include "master_project/bin.hpp"
 #include "master_project/helper_function.hpp"
-#include <cstring>
-#include <vector>
 
 class Accumulator {
 public:

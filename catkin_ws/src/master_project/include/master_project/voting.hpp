@@ -3,7 +3,6 @@
 
 #include "master_project/accumulator.hpp"
 #include "master_project/kernel.hpp"
-#include "master_project/bin.hpp"
 
 
 void voting(Quadtree           & root,

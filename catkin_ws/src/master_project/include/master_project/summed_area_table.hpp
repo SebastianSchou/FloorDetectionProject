@@ -12,7 +12,7 @@ public:
 
   Sat(const int height, const int width)
   {
-    this->sat = cv::Mat::zeros(height, width, CV_64F);
+    this->sat = cv::Mat::zeros(cv::Size(width, height), CV_64F);
   }
 
   cv::Mat sat;

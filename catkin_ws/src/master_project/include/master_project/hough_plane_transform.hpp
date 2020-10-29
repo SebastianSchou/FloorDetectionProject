@@ -7,29 +7,31 @@
 #include "master_project/voting.hpp"
 #include "master_project/peak_detection.hpp"
 
-class HoughPlaneTransform
-{
+class HoughPlaneTransform {
 public:
-	HoughPlaneTransform(CameraData &cameraData)
-	{
-		auto start = std::chrono::steady_clock::now();
-	  root.initializeRoot(cameraData);
-	  root.divideIntoQuadrants();
-	  timeQuadtree = msUntilNow(start);
-	  accumulator = new Accumulator(root.maxDistance, 80, 30);
-	  voting(root, *accumulator, usedBins, usedKernels);
-	  timeVoting = msUntilNow(start) - timeQuadtree;
-	  peakDetection(planes, *accumulator, usedKernels, usedBins);
-	  timePeak = msUntilNow(start) - timeQuadtree - timeVoting;
-	}
-	~HoughPlaneTransform()
-	{
-	}
 
-	void assignColorToPlanes()
-	{
-		std::sort(planes.begin(), planes.end());
-		for (unsigned int i = 0; i < planes.size(); i++) {
+  HoughPlaneTransform(CameraData& cameraData)
+  {
+    auto start = std::chrono::steady_clock::now();
+
+    root.initializeRoot(cameraData);
+    root.divideIntoQuadrants();
+    timeQuadtree = msUntilNow(start);
+    accumulator = new Accumulator(root.maxDistance, 80, 30);
+    voting(root, *accumulator, usedBins, usedKernels);
+    timeVoting = msUntilNow(start) - timeQuadtree;
+    peakDetection(planes, *accumulator, usedKernels, usedBins);
+    timePeak = msUntilNow(start) - timeQuadtree - timeVoting;
+  }
+
+  ~HoughPlaneTransform()
+  {
+  }
+
+  void assignColorToPlanes()
+  {
+    std::sort(planes.begin(), planes.end());
+    for (unsigned int i = 0; i < planes.size(); i++) {
       int colorValue = (int)(255 / (int)(i / 6 + 1));
       cv::Mat color(cv::Size(3, 1), CV_8U, cv::Scalar(0));
       switch (i % 6) {
@@ -61,20 +63,20 @@ public:
         node->color = color;
       }
     }
-	}
+  }
 
-	void printTimePartition()
-	{
-		ROS_INFO("Quadtree: %.3f ms. Voting: %.3f ms. Peak detection: %.3f ms",
-						 timeQuadtree, timeVoting, timePeak);
-	}
+  void printTimePartition()
+  {
+    ROS_INFO("Quadtree: %.3f ms. Voting: %.3f ms. Peak detection: %.3f ms",
+             timeQuadtree, timeVoting, timePeak);
+  }
 
-	Quadtree root;
-	Accumulator *accumulator;
-	std::vector<Bin> usedBins;
+  Quadtree root;
+  Accumulator *accumulator;
+  std::vector<Bin> usedBins;
   std::vector<Kernel> usedKernels;
-	std::vector<Plane> planes;
-	double timeQuadtree, timeVoting, timePeak;
+  std::vector<Plane> planes;
+  double timeQuadtree, timeVoting, timePeak;
 };
 
 #endif // HOUGH_PLANE_TRANSFORM_HPP

@@ -1,10 +1,6 @@
 #include "master_project/accumulator.hpp"
-#include "master_project/bin.hpp"
 #include "master_project/kernel.hpp"
 #include "master_project/plane.hpp"
-#include <cmath>
-#include <vector>
-#include <algorithm>
 
 inline void peakDetection(std::vector<Plane> & planes,
                           Accumulator        & accum,

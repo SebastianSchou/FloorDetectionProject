@@ -13,8 +13,8 @@ public:
     samples = 0.0;
     isShowing = true;
     rotate = 0.0;
-    normal = cv::Mat::zeros(3, 1, CV_64F);
-    mean = cv::Mat::zeros(3, 1, CV_64F);
+    normal = cv::Mat::zeros(cv::Size(1, 3), CV_64F);
+    mean = cv::Mat::zeros(cv::Size(1, 3), CV_64F);
     samples = 0;
   }
 
@@ -32,10 +32,10 @@ public:
 
     // Get cross product of normal vector???)
     double  v[3] = { 0.0, 0.0, 1.0 };
-    cv::Mat cu(3, 1, CV_64F, v);
+    cv::Mat cu(cv::Size(1, 3), CV_64F, v);
     if (isMatEqual(cu, normal)) {
       v[0] = 1.0; v[2] = 0.0;
-      cu = cv::Mat(3, 1, CV_64F, v);
+      cu = cv::Mat(cv::Size(1, 3), CV_64F, v);
     }
     cross = normalizeVector(cu.mul(normal));
     cross2 = normal.mul(cross);

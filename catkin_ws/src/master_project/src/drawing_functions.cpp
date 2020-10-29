@@ -8,13 +8,13 @@ void DrawingFunctions::drawQuadtreeBorders(cv::Mat   & image,
     cv::rectangle(image,
                   node.minBounds * cameraData.filterVariables.decimationScaleFactor,
                   node.maxBounds * cameraData.filterVariables.decimationScaleFactor,
-                  (255, 255, 0),
+                  cv::Scalar(0, 0, 255),
                   3);
   } else {
     cv::rectangle(image,
                   node.minBounds * cameraData.filterVariables.decimationScaleFactor,
                   node.maxBounds * cameraData.filterVariables.decimationScaleFactor,
-                  (255, 0, 0),
+                  cv::Scalar(0, 0, 255),
                   1);
   }
   if (node.children != NULL) {
@@ -27,9 +27,17 @@ void DrawingFunctions::drawQuadtreeBorders(cv::Mat   & image,
 void DrawingFunctions::drawQuadtreeBorders(cv::Mat& image, Quadtree& node)
 {
   if (node.isPlane) {
-    cv::rectangle(image, node.minBounds, node.maxBounds, (255, 255, 0), 3);
+    cv::rectangle(image,
+                  node.minBounds,
+                  node.maxBounds,
+                  cv::Scalar(0, 0, 255),
+                  3);
   } else {
-    cv::rectangle(image, node.minBounds, node.maxBounds, (255, 0, 0), 1);
+    cv::rectangle(image,
+                  node.minBounds,
+                  node.maxBounds,
+                  cv::Scalar(0, 0, 255),
+                  1);
   }
   if (node.children != NULL) {
     for (int i = 0; i < 4; i++) {
@@ -114,13 +122,15 @@ void DrawingFunctions::drawPlanesInQuadtree(cv::Mat   & image,
     cv::rectangle(rect,
                   node.minBounds * cameraData.filterVariables.decimationScaleFactor,
                   node.maxBounds * cameraData.filterVariables.decimationScaleFactor,
-                  cv::Scalar(r, g, b), cv::FILLED);
+                  cv::Scalar(r, g, b),
+                  cv::FILLED);
     cv::addWeighted(image, 1.0, rect, 0.5, 0.0, image);
   }
   cv::rectangle(image,
                 node.minBounds * cameraData.filterVariables.decimationScaleFactor,
                 node.maxBounds * cameraData.filterVariables.decimationScaleFactor,
-                cv::Scalar(255, 0, 0), 1);
+                cv::Scalar(255, 0, 0),
+                1);
   if (node.children != NULL) {
     for (int i = 0; i < 4; i++) {
       drawPlanesInQuadtree(image, node.children[i], cameraData);
