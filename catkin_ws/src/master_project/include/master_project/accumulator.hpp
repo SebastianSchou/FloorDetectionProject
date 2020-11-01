@@ -8,7 +8,7 @@
 class Accumulator {
 public:
 
-  Accumulator(const double maxDistance, const int noOfRhoCells,
+  Accumulator(const double maxDistance, const float rhoDeltaValue,
               const int noOfPhiCells);
   ~Accumulator();
 

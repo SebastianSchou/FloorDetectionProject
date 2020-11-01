@@ -22,7 +22,7 @@ Quadtree::Quadtree()
   minVariance = 0;
   samples = 0;
   isPlane = false;
-  maxDistance = 0;
+  maxPlaneDistance = 0.0;
   rootRepresentativeness = 0.0;
   setMinSamplesInNode(25);
   setMaxPlaneThickness(0.36);
@@ -55,6 +55,13 @@ void Quadtree::divideIntoQuadrants()
   if (areaThickness < root->getMaxPlaneThickness()) {
     isPlane = true;
     root->planes.push_back(this);
+
+    // If the distance from plane to camera center is negative,
+    // inverse the normal
+    if (normalizeVector(mean).dot(normal) < 0) {
+      normal *= -1.0;
+    }
+    root->maxPlaneDistance = std::max(root->maxPlaneDistance, mean.dot(normal));
     return;
   }
 
@@ -196,8 +203,6 @@ void Quadtree::initializeRoot(const CameraData& cameraData)
         validCoordinates.push_back(validCoordinate);
         std::vector<int> validPixel { r, c };
         validPixels.push_back(validPixel);
-        maxDistance = std::max(maxDistance,
-                               std::sqrt(square(x) + square(y) + square(z)));
       }
 
       // Calculate sum table for this point

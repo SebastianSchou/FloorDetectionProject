@@ -9,7 +9,7 @@ void voting(Quadtree           & root,
             Accumulator        & accum,
             std::vector<Bin>   & usedBins,
             std::vector<Kernel>& usedKernels);
-void computeKernel(Quadtree           & node,
+bool computeKernel(Quadtree           & node,
                    Accumulator        & accum,
                    std::vector<Kernel>& usedKernels);
 void gaussianVoting3d(Kernel          & kernel,

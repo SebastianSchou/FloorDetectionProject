@@ -17,7 +17,8 @@ public:
     root.initializeRoot(cameraData);
     root.divideIntoQuadrants();
     timeQuadtree = msUntilNow(start);
-    accumulator = new Accumulator(root.maxDistance, 80, 30);
+    float rhoDelta = 0.04; // [m]
+    accumulator = new Accumulator(root.maxPlaneDistance, rhoDelta, 30);
     voting(root, *accumulator, usedBins, usedKernels);
     timeVoting = msUntilNow(start) - timeQuadtree;
     peakDetection(planes, *accumulator, usedKernels, usedBins);

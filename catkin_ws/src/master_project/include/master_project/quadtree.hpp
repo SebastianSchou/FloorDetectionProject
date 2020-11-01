@@ -23,7 +23,7 @@ public:
   cv::Point minBounds, maxBounds;
   Quadtree *root, *children;
   int samples, level;
-  double areaThickness, minVariance, maxDistance, rootRepresentativeness;
+  double areaThickness, minVariance, maxPlaneDistance, rootRepresentativeness;
   SummedAreaTable sat;
   std::vector<Quadtree *> planes, nonPlanes;
   std::vector<std::vector<double> > validCoordinates;

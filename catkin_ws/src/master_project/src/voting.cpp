@@ -8,7 +8,9 @@ void voting(Quadtree           & root,
   int i = 0;
 
   for (Quadtree *node : root.planes) {
-    computeKernel(*node, accumulator, usedKernels);
+    if (!computeKernel(*node, accumulator, usedKernels)) {
+      continue;
+    }
 
     // Voting is done in two steps: First in phi, theta dimension (based on
     // plane angle), and then in rho direction (based on distance to plane).
@@ -19,7 +21,7 @@ void voting(Quadtree           & root,
 }
 
 // Calculates gaussian kernel parameters
-void computeKernel(Quadtree           & node,
+bool computeKernel(Quadtree           & node,
                    Accumulator        & accum,
                    std::vector<Kernel>& usedKernels)
 {
@@ -28,18 +30,14 @@ void computeKernel(Quadtree           & node,
 
   kernel.node = &node;
 
-  // Make certain that rho, the distance from plane to camera center,
-  // is positive, and that arccos can be taken to the z direction of
+  // Make certain that arccos can be taken to the z direction of
   // the normal vector
-  if (normalizeVector(node.mean).dot(node.normal) < 0) {
-    node.normal *= -1.0;
-  }
   if (node.normal.at<double>(2) > 1.0) {
     node.normal.at<double>(2) = 1.0;
   }
 
   // Set phi, theta, and rho values. Phi and theta are the rotation of the
-  // plane in x and y directions
+  // plane in x and y directions, and rho is the distance from plane to origo
   kernel.phi = std::acos(node.normal.at<double>(2));
   kernel.theta =
     std::atan2(node.normal.at<double>(1), node.normal.at<double>(0));
@@ -47,14 +45,20 @@ void computeKernel(Quadtree           & node,
 
   // Get indeces for the accumulator and make certain that they are
   // correct values
-  accum.processIndexLimits(kernel.thetaIndex, kernel.phiIndex, kernel.rhoIndex);
   accum.getIndex(kernel.theta, kernel.phi, kernel.rho, kernel.thetaIndex,
                  kernel.phiIndex, kernel.rhoIndex);
+  if (!accum.processIndexLimits(kernel.thetaIndex, kernel.phiIndex,
+                                kernel.rhoIndex)) {
+    ROS_ERROR("Kernels rho index exceeded maximum (rho: %d, max: %d)."
+              " This should NOT happen.", kernel.rhoIndex, accum.rhoLength);
+    return false;
+  }
   kernel.thetaIndex = accum.fixTheta(kernel.thetaIndex, kernel.phiIndex);
 
   // Process kernel
   kernel.computeKernelParameters();
   usedKernels.push_back(kernel);
+  return true;
 }
 
 // Voting in 3 dimensions (theta, phi and rho)
