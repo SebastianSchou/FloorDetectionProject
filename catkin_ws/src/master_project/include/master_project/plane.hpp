@@ -4,6 +4,8 @@
 #include <master_project/quadtree.hpp>
 #include <master_project/helper_function.hpp>
 
+#define MIN_INDEPENDENT_NODE_SIZE 50
+
 class Plane {
 public:
 
@@ -42,11 +44,43 @@ public:
 
     // Get nodes representing the plane
     for (Quadtree *node : nodes) {
+      if (node->samples < MIN_INDEPENDENT_NODE_SIZE) {
+        if (!hasNeighbor(node)) {
+          nodes.erase(node);
+          continue;
+        }
+      }
       rootRepresentativeness += node->rootRepresentativeness;
       mean += node->mean;
       samples += node->samples;
     }
     mean /= (double)nodes.size();
+  }
+
+  bool hasNeighbor(Quadtree *loneNode)
+  {
+    int x1 = loneNode->minBounds.x, x2 = loneNode->maxBounds.x;
+    int y1 = loneNode->minBounds.y, y2 = loneNode->maxBounds.y;
+    std::vector<Quadtree *> nextNodes; nextNodes.push_back(loneNode);
+    int samples = loneNode->samples;
+    for (const Quadtree *nextNode : nextNodes) {
+      for (Quadtree *node : nodes) {
+        int xn1 = node->minBounds.x, xn2 = node->maxBounds.x;
+        int yn1 = node->minBounds.y, yn2 = node->maxBounds.y;
+        if ((x1 == xn1) && (y1 == yn1)) {
+          continue;
+        }
+        if (((x1 == xn1) || (x2 == xn1) || (x1 == xn2) || (x2 == xn2)) &&
+            ((y1 == yn1) || (y2 == yn1) || (y1 == yn2) || (y2 == yn2))) {
+          samples += nextNode->samples;
+          if (samples > 200) {
+            return true;
+          }
+          nextNodes.push_back(node);
+        }
+      }
+    }
+    return false;
   }
 
   inline bool operator<(const Plane& p) const
