@@ -10,17 +10,12 @@ float msUntilNow(
 
 cv::Mat normalizeVector(const cv::Mat& v)
 {
-  if (std::min(v.rows, v.cols) != 1) {
+  double vectorLength = squareNorm(v);
+
+  if (vectorLength == 0.0) {
     return v;
   }
-  double  temp = 0.0;
-  int     length = std::max(v.rows, v.cols);
-  cv::Mat norm = v;
-  for (int i = 0; i < length; i++) {
-    temp += v.at<double>(i) * v.at<double>(i);
-  }
-  temp = std::sqrt(temp);
-  return norm.mul(1 / temp);
+  return v.mul(1 / vectorLength);
 }
 
 double square(const double v)
@@ -41,4 +36,44 @@ bool isMatEqual(const cv::Mat m1, const cv::Mat m2)
     }
   }
   return true;
+}
+
+double squareNorm(const cv::Mat& v)
+{
+  if (std::min(v.rows, v.cols) != 1) {
+    return 0.0;
+  }
+  double  vectorLength = 0.0;
+  int     vectorSize = std::max(v.rows, v.cols);
+  cv::Mat norm = v;
+  for (int i = 0; i < vectorSize; i++) {
+    vectorLength += square(v.at<double>(i));
+  }
+  vectorLength = std::sqrt(vectorLength);
+  return vectorLength;
+}
+
+Incrementer::Incrementer(const float min, const float max, const float step)
+{
+  min_ = min;
+  max_ = max;
+  step_ = step;
+  value_ = (max - min) / 2;
+  increase_ = 1;
+}
+
+float Incrementer::increment()
+{
+  if (value_ > max_) {
+    increase_ = -1;
+  } else if (value_ < min_) {
+    increase_ = 1;
+  }
+  value_ += step_ * increase_;
+  return value_;
+}
+
+float Incrementer::getValue()
+{
+  return value_;
 }
