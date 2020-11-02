@@ -193,10 +193,13 @@ void Quadtree::initializeRoot(const CameraData& cameraData)
       // Ignore points where distance is 0
       if (z > 0) {
         // Calculate x and y using z and the depth cameras intrinsics
-        double x = (c - cameraData.intrinsics.ppx) * z /
-                   cameraData.intrinsics.fx;
-        double y = (r - cameraData.intrinsics.ppy) * z /
-                   cameraData.intrinsics.fy;
+        double scaleSize = cameraData.filterVariables.decimationScaleFactor;
+        double ppx = cameraData.intrinsics.ppx / scaleSize;
+        double ppy = cameraData.intrinsics.ppy / scaleSize;
+        double fx = cameraData.intrinsics.fx / scaleSize;
+        double fy = cameraData.intrinsics.fy / scaleSize;
+        double x = (c - ppx) * z / fx;
+        double y = (r - ppy) * z / fy;
 
         // Set values
         sat.satX.set(r, c, x);

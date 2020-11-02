@@ -19,7 +19,7 @@ public:
     root.initializeRoot(cameraData);
     root.divideIntoQuadrants();
     timeQuadtree = msUntilNow(start);
-    float rhoDelta = 0.04; // [m]
+    float rhoDelta = 0.08; // [m]
     accumulator = new Accumulator(root.maxPlaneDistance, rhoDelta, 30);
     voting(root, *accumulator, usedBins, usedKernels);
     timeVoting = msUntilNow(start) - timeQuadtree;
@@ -77,13 +77,15 @@ public:
   void printPlaneInformation()
   {
     printf("=============PLANE INFORMATION=============\n");
-    for (const Plane& plane : planes) {
+    for (Plane& plane : planes) {
       printf("Samples: %d, nodes: %ld, normal: [%.3f, %.3f, %.3f], "
-             "mean: [%.3f, %.3f, %.3f]\n",
+             "position: [%.3f, %.3f, %.3f]\n"
+             "Distance to plane: %.3f\n",
              plane.samples, plane.nodes.size(),
              plane.normal.at<double>(0), plane.normal.at<double>(1),
-             plane.normal.at<double>(2), plane.mean.at<double>(0),
-             plane.mean.at<double>(1), plane.mean.at<double>(2));
+             plane.normal.at<double>(2), plane.position.at<double>(0),
+             plane.position.at<double>(1), plane.position.at<double>(2),
+             plane.rho);
       for (const Quadtree *node : plane.nodes) {
         printf("  Node at (%d, %d) to (%d, %d) with %d samples:\n",
                node->minBounds.x * decimationFactor,
