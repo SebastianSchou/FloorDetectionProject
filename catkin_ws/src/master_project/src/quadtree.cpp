@@ -24,6 +24,7 @@ Quadtree::Quadtree()
   isPlane = false;
   maxPlaneDistance = 0.0;
   rootRepresentativeness = 0.0;
+  sampleDensity = 0.0;
   setMinSamplesInNode(25);
   setMaxPlaneThickness(0.36);
 }
@@ -46,23 +47,26 @@ void Quadtree::divideIntoQuadrants()
     root->nonPlanes.push_back(this);
     return;
   }
+  computeSampleDensity();
+  if (sampleDensity > 0.9) {
+    PCA();
 
-  PCA();
+    // Get the thickness of the data within the 95 percentage interval
+    areaThickness = CONFIDENCE_INTERVAL_95_PERCENTAGE *
+                    std::sqrt(minVariance);
+    if (areaThickness < root->getMaxPlaneThickness()) {
+      isPlane = true;
+      root->planes.push_back(this);
 
-  // Get the thickness of the data within the 95 percentage interval
-  areaThickness = CONFIDENCE_INTERVAL_95_PERCENTAGE *
-                  std::sqrt(minVariance);
-  if (areaThickness < root->getMaxPlaneThickness()) {
-    isPlane = true;
-    root->planes.push_back(this);
-
-    // If the distance from plane to camera center is negative,
-    // inverse the normal
-    if (normalizeVector(mean).dot(normal) < 0) {
-      normal *= -1.0;
+      // If the distance from plane to camera center is negative,
+      // inverse the normal
+      if (normalizeVector(mean).dot(normal) < 0) {
+        normal *= -1.0;
+      }
+      root->maxPlaneDistance =
+        std::max(root->maxPlaneDistance, mean.dot(normal));
+      return;
     }
-    root->maxPlaneDistance = std::max(root->maxPlaneDistance, mean.dot(normal));
-    return;
   }
 
   // Do not split into quadrants if children are below minimum samples size
@@ -91,6 +95,14 @@ void Quadtree::divideIntoQuadrants()
     children[i].level = level + 1;
     children[i].divideIntoQuadrants();
   }
+}
+
+void Quadtree::computeSampleDensity()
+{
+  int width = maxBounds.x - minBounds.x + 1;
+  int height = maxBounds.y - minBounds.y + 1;
+
+  sampleDensity = (float)samples / (float)(width * height);
 }
 
 void Quadtree::PCA()

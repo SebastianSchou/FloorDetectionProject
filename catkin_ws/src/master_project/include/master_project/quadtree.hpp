@@ -10,6 +10,7 @@ public:
   Quadtree();
   ~Quadtree();
   void         divideIntoQuadrants();
+  void         computeSampleDensity();
   void         PCA();
   void         computeMean();
   void         computeCovariance();
@@ -23,7 +24,8 @@ public:
   cv::Point minBounds, maxBounds;
   Quadtree *root, *children;
   int samples, level;
-  double areaThickness, minVariance, maxPlaneDistance, rootRepresentativeness;
+  double areaThickness, minVariance, maxPlaneDistance, rootRepresentativeness,
+         sampleDensity;
   SummedAreaTable sat;
   std::vector<Quadtree *> planes, nonPlanes;
   std::vector<std::vector<double> > validCoordinates;
