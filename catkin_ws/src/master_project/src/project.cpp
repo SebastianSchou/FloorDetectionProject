@@ -39,8 +39,7 @@ int main(int argc, char **argv)
 
     HoughPlaneTransform houghPlaneTransform(cameraData);
     std::vector<Plane>  planes = houghPlaneTransform.planes;
-
-    // houghPlaneTransform.printPlaneInformation();
+    // houghPlaneTransform.printPlanesInformation();
 
     // Calculate average itteration time
     timeSum += msUntilNow(start);
