@@ -184,11 +184,8 @@ void Quadtree::initializeRoot(const CameraData& cameraData)
 
   for (int r = 0; r < cameraData.height; r++) {
     for (int c = 0; c < cameraData.width; c++) {
-      // Depth array index
-      int index = c + r * (cameraData.width);
-
       // Get distance
-      double z = cameraData.depthArray[index] * cameraData.depthScale;
+      double z = cameraData.depthData.at<double>(r, c);
 
       // Ignore points where distance is 0
       if (z > 0) {

@@ -1,0 +1,6 @@
+<launch>
+		<arg name="file" default="all"/>
+    <node pkg="master_project" type="master_project" name="load_picture" args="--load_picture"/>
+    <param name="file" value="$(arg file)"/> 
+</launch>
+

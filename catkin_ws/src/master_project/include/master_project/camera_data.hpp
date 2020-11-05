@@ -19,15 +19,14 @@ public:
   CameraData(int width, int height, int fps);
   bool initializeCamera();
   bool processFrames();
+  bool loadImage(const std::string& filename);
 
   rs2::pipeline pipe;
   rs2::pipeline_profile profile;
-  float depthScale;
   int width, height;
   rs2_intrinsics intrinsics;
   cv::Mat normalColorImage, colorizedDepthImage, depthAlignedColorImage,
-          irImage;
-  const uint16_t *depthArray;
+          irImage, depthData;
   FilterVariables filterVariables;
 
 private:
@@ -42,6 +41,7 @@ private:
   rs2::colorizer colorMap;
   rs2::frameset frames;
   int imageWidth, imageHeight, cameraFps, timeout = 5000;
+  float depthScale;
 };
 
 #endif // CAMERA_DATA_HPP

@@ -3,6 +3,8 @@
 #include "master_project/drawing_functions.hpp"
 #include "master_project/hough_plane_transform.hpp"
 #include "master_project/plane_analysis.hpp"
+#include "master_project/take_picture.hpp"
+#include "master_project/load_picture.hpp"
 
 
 #define EXIT_SUCCESS 0
@@ -11,9 +13,18 @@
 #define IMAGE_WIDTH 640
 #define IMAGE_HEIGHT 480
 #define CAPTURED_FRAMES_PER_SECONDS 15
+#define FILE_PATH "/home/sebastian/Master/images/"
 
 int main(int argc, char **argv)
 {
+  if (std::string(argv[1]) == "--take_picture") {
+    return takePicture(argc, argv, IMAGE_WIDTH_DEPTH, IMAGE_HEIGHT,
+                       CAPTURED_FRAMES_PER_SECONDS, FILE_PATH);
+  } else if (std::string(argv[1]) == "--load_picture") {
+    return loadPicture(argc, argv, IMAGE_WIDTH_DEPTH, IMAGE_HEIGHT,
+                     CAPTURED_FRAMES_PER_SECONDS, FILE_PATH);
+  }
+
   // Initialize ros
   ros::init(argc, argv, "master_project");
   ros::NodeHandle nh;

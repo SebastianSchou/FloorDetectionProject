@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="master_project" type="master_project" name="take_picture" args="--take_picture"/>
+</launch>
+

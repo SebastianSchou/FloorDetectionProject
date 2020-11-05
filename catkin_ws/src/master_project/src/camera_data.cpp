@@ -164,9 +164,39 @@ bool CameraData::processFrames()
   cv::equalizeHist(irImage, irImage);
   cv::applyColorMap(irImage, irImage, cv::COLORMAP_JET);
 
-  // Get depth data as an array
-  depthArray = reinterpret_cast<const uint16_t *>(
-    depthFrameFiltered.get_data());
+  // Get depth data as a matrix
+  cv::Mat depthDataTemp = cv::Mat(cv::Size(width, height), CV_16UC1,
+                      (ushort*)depthFrameFiltered.get_data());
+  depthDataTemp.convertTo(depthData, CV_64F, depthScale);
 
+  return true;
+}
+
+bool CameraData::loadImage(const std::string& filename)
+{
+  width = imageWidth / filterVariables.decimationScaleFactor;
+  height = imageHeight / filterVariables.decimationScaleFactor;
+  cv::FileStorage file(filename + "_depth.xml", cv::FileStorage::READ);
+  if (!file.isOpened()) {
+    ROS_ERROR("File %s could not be opened.",
+              (filename + "_depth.xml").c_str());
+    return false;
+  }
+
+  file["depth"] >> depthData;
+  depthData.convertTo(depthData, CV_32F);
+  cv::medianBlur(depthData, depthData, 5);
+  cv::GaussianBlur(depthData, depthData, cv::Size(5, 5), 0);
+
+  try {
+    normalColorImage = cv::imread(filename + "_color.png", cv::IMREAD_COLOR);
+    depthAlignedColorImage = cv::imread(filename + "_color_depth.png",
+                                        cv::IMREAD_COLOR);
+  } catch (...) {
+    ROS_ERROR("File %s or %s could not be opened.",
+              (filename + "_color.png").c_str(),
+              (filename + "_color_depth.png").c_str());
+    return false;
+  }
   return true;
 }

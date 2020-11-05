@@ -163,7 +163,9 @@ add_executable(${PROJECT_NAME}
   include/${PROJECT_NAME}/plane.hpp
   include/${PROJECT_NAME}/peak_detection.hpp
   include/${PROJECT_NAME}/hough_plane_transform.hpp
-  include/${PROJECT_NAME}/plane_analysis.hpp)
+  include/${PROJECT_NAME}/plane_analysis.hpp
+  include/${PROJECT_NAME}/take_picture.hpp
+  include/${PROJECT_NAME}/load_picture.hpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -230,6 +232,8 @@ install(DIRECTORY scripts/
 
 install(PROGRAMS
   scripts/runMasterProject.sh
+  scripts/takePicture.sh
+  scripts/loadPicture.sh
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts
 )
 
