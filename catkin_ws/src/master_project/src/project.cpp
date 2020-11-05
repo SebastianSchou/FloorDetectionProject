@@ -2,6 +2,7 @@
 #include <opencv4/opencv2/core/ocl.hpp>
 #include "master_project/drawing_functions.hpp"
 #include "master_project/hough_plane_transform.hpp"
+#include "master_project/plane_analysis.hpp"
 
 
 #define EXIT_SUCCESS 0
@@ -39,6 +40,14 @@ int main(int argc, char **argv)
 
     HoughPlaneTransform houghPlaneTransform(cameraData);
     std::vector<Plane>  planes = houghPlaneTransform.planes;
+    Plane floor = PlaneAnalysis::getGroundPlane(planes);
+
+    if (floor.rho != 0.0) {
+      houghPlaneTransform.assignColorToPlane(floor, 0, 0, 255);
+    }
+
+    // houghPlaneTransform.printTimePartition();
+    // houghPlaneTransform.printPlaneInformation(floor);
     // houghPlaneTransform.printPlanesInformation();
 
     // Calculate average itteration time
