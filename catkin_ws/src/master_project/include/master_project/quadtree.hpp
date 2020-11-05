@@ -9,11 +9,19 @@ public:
 
   Quadtree();
   ~Quadtree();
-  void         divideIntoQuadrants();
-  void         computeSampleDensity();
-  void         PCA();
-  void         computeMean();
-  void         computeCovariance();
+  void  divideIntoQuadrants();
+  void  computeSampleDensity();
+  void  PCA();
+  void  computeMean();
+  void  computeCovariance();
+  float getGradient(const cv::Mat& m,
+                    const double   v,
+                    const int      r,
+                    const int      c);
+  float        getSobelGradientX(const cv::Mat& depth, const int r,
+                                 const int c);
+  float        getSobelGradientY(const cv::Mat& depth, const int r,
+                                 const int c);
   void         initializeRoot(const CameraData& cameraData);
   void         setMaxPlaneThickness(const double maxPlaneThickness);
   const double getMaxPlaneThickness() const;

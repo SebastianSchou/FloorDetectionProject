@@ -166,8 +166,8 @@ bool CameraData::processFrames()
 
   // Get depth data as a matrix
   cv::Mat depthDataTemp = cv::Mat(cv::Size(width, height), CV_16UC1,
-                      (ushort*)depthFrameFiltered.get_data());
-  depthDataTemp.convertTo(depthData, CV_64F, depthScale);
+                                  (ushort *)depthFrameFiltered.get_data());
+  depthDataTemp.convertTo(depthData, CV_32F, depthScale);
 
   return true;
 }

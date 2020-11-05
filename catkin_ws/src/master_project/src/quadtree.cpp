@@ -9,6 +9,9 @@
 #define Y 1
 #define Z 2
 #define MIN_EIGENVALUE_INDEX 2
+#define MIN_SAMPLE_DENSITY 0.9 // [%]
+#define MAX_GRADIANT_SUM 60.0  // [m]
+#define MAX_DISTANCE 10.0      // [m]
 
 Quadtree::Quadtree()
 {
@@ -47,8 +50,13 @@ void Quadtree::divideIntoQuadrants()
     root->nonPlanes.push_back(this);
     return;
   }
+
+  // Only perform PCA analysis if sample density is above its limit and
+  // the sum of the gradient does not exceed its limit
   computeSampleDensity();
-  if (sampleDensity > 0.9) {
+  double gradientSum = root->sat.satGradient.getArea(minBounds, maxBounds);
+  if ((sampleDensity > MIN_SAMPLE_DENSITY) &&
+      (gradientSum < MAX_GRADIANT_SUM)) {
     PCA();
 
     // Get the thickness of the data within the 95 percentage interval
@@ -185,10 +193,10 @@ void Quadtree::initializeRoot(const CameraData& cameraData)
   for (int r = 0; r < cameraData.height; r++) {
     for (int c = 0; c < cameraData.width; c++) {
       // Get distance
-      double z = cameraData.depthData.at<double>(r, c);
+      double z = cameraData.depthData.at<float>(r, c);
 
-      // Ignore points where distance is 0
-      if (z > 0) {
+      // Ignore points where distance is 0 or above 10 m
+      if ((z > 0) && (z < MAX_DISTANCE)) {
         // Calculate x and y using z and the depth cameras intrinsics
         double scaleSize = cameraData.filterVariables.decimationScaleFactor;
         double ppx = cameraData.intrinsics.ppx / scaleSize;
@@ -197,6 +205,11 @@ void Quadtree::initializeRoot(const CameraData& cameraData)
         double fy = cameraData.intrinsics.fy / scaleSize;
         double x = (c - ppx) * z / fx;
         double y = (r - ppy) * z / fy;
+
+        // Calculate gradient
+        double sobelX = getSobelGradientX(cameraData.depthData, r, c);
+        double sobelY = getSobelGradientY(cameraData.depthData, r, c);
+        double sobel = std::abs(sobelX) + std::abs(sobelY);
 
         // Set values
         sat.satX.set(r, c, x);
@@ -209,6 +222,7 @@ void Quadtree::initializeRoot(const CameraData& cameraData)
         sat.satYZ.set(r, c, y * z);
         sat.satZZ.set(r, c, z * z);
         sat.satSamples.set(r, c, 1);
+        sat.satGradient.set(r, c, sobel);
 
         // Save valid points
         std::vector<double> validCoordinate { x, y, z };
@@ -228,8 +242,49 @@ void Quadtree::initializeRoot(const CameraData& cameraData)
       sat.satYZ.setSumValue(r, c);
       sat.satZZ.setSumValue(r, c);
       sat.satSamples.setSumValue(r, c);
+      sat.satGradient.setSumValue(r, c);
     }
   }
+}
+
+float Quadtree::getGradient(const cv::Mat& m, const double v, const int r,
+                            const int c)
+{
+  if ((r == 0) || (c == 0) || (v == 0)) {
+    return 0.0;
+  }
+  double gradientX = std::abs(std::abs(v) - std::abs(m.at<float>(r, c - 1)));
+  double gradientY = std::abs(std::abs(v) - std::abs(m.at<float>(r - 1, c)));
+
+  return gradientX + gradientY;
+}
+
+float Quadtree::getSobelGradientX(const cv::Mat& depth, const int r,
+                                  const int c)
+{
+  if ((r == 0) || (r == depth.rows - 1) || (c == 0) || (c == depth.cols - 1)) {
+    return 0.0;
+  }
+  return depth.at<float>(r - 1, c + 1) +
+         depth.at<float>(r, c + 1) * 2 +
+         depth.at<float>(r + 1, c + 1) -
+         depth.at<float>(r - 1, c - 1) -
+         depth.at<float>(r, c - 1) * 2 -
+         depth.at<float>(r + 1, c - 1);
+}
+
+float Quadtree::getSobelGradientY(const cv::Mat& depth, const int r,
+                                  const int c)
+{
+  if ((r == 0) || (r == depth.rows - 1) || (c == 0) || (c == depth.cols - 1)) {
+    return 0.0;
+  }
+  return depth.at<float>(r + 1, c + 1) +
+         depth.at<float>(r + 1, c) * 2 +
+         depth.at<float>(r + 1, c - 1) -
+         depth.at<float>(r - 1, c + 1) -
+         depth.at<float>(r - 1, c) * 2 -
+         depth.at<float>(r - 1, c - 1);
 }
 
 void Quadtree::setMaxPlaneThickness(const double maxPlaneThickness)
