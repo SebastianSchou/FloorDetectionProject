@@ -17,6 +17,7 @@ public:
     rotate = 0.0;
     normal = cv::Mat::zeros(cv::Size(1, 3), CV_64F);
     mean = cv::Mat::zeros(cv::Size(1, 3), CV_64F);
+    color = cv::Mat::zeros(cv::Size(1, 3), CV_8U);
     samples = 0;
   }
 

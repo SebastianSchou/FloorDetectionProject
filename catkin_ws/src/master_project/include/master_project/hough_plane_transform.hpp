@@ -13,6 +13,7 @@ public:
   HoughPlaneTransform(CameraData& cameraData);
   ~HoughPlaneTransform();
   void assignColorToPlanes();
+  void assignColorToPlane(Plane &plane, int r, int g, int b);
   void printTimePartition();
   void printPlanesInformation();
   void printPlaneInformation(const Plane &plane);
