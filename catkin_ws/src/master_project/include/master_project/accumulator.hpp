@@ -8,8 +8,8 @@
 class Accumulator {
 public:
 
-  Accumulator(const double maxDistance, const float rhoDeltaValue,
-              const int noOfPhiCells);
+  Accumulator(const double maxDistance, const double maxPhiAngle,
+              const float rhoDeltaValue, const float phiDeltaValue);
   ~Accumulator();
 
   std::set<Quadtree *>        convolutionNodes(const double thetaIndex,

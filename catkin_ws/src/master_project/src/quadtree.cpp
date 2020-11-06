@@ -25,9 +25,10 @@ Quadtree::Quadtree()
   minVariance = 0;
   samples = 0;
   isPlane = false;
-  maxPlaneDistance = 0.0;
+  maxPlaneDistance = 0.0; maxPhiAngle = 0.0;
   rootRepresentativeness = 0.0;
   sampleDensity = 0.0;
+  rho = 0.0; phi = 0.0; theta = 0.0;
   setMinSamplesInNode(25);
   setMaxPlaneThickness(0.36);
 }
@@ -67,12 +68,21 @@ void Quadtree::divideIntoQuadrants()
       root->planes.push_back(this);
 
       // If the distance from plane to camera center is negative,
-      // inverse the normal
+      // inverse the normal, and make certain that arccos can be taken
+      // to the z direction of the normal vector
       if (normalizeVector(mean).dot(normal) < 0) {
         normal *= -1.0;
       }
-      root->maxPlaneDistance =
-        std::max(root->maxPlaneDistance, mean.dot(normal));
+      if (normal.at<double>(2) > 1.0) {
+        normal.at<double>(2) = 1.0;
+      }
+      theta = std::atan2(normal.at<double>(1), normal.at<double>(0));
+      phi = std::acos(normal.at<double>(2));
+      rho = mean.dot(normal);
+
+      // Find max plane distance and max phi angle
+      root->maxPlaneDistance = std::max(root->maxPlaneDistance, rho);
+      root->maxPhiAngle = std::max(root->maxPhiAngle, phi);
       return;
     }
   }

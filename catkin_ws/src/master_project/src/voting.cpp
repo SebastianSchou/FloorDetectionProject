@@ -30,18 +30,11 @@ bool computeKernel(Quadtree           & node,
 
   kernel.node = &node;
 
-  // Make certain that arccos can be taken to the z direction of
-  // the normal vector
-  if (node.normal.at<double>(2) > 1.0) {
-    node.normal.at<double>(2) = 1.0;
-  }
-
   // Set phi, theta, and rho values. Phi and theta are the rotation of the
   // plane in x and y directions, and rho is the distance from plane to origo
-  kernel.phi = std::acos(node.normal.at<double>(2));
-  kernel.theta =
-    std::atan2(node.normal.at<double>(1), node.normal.at<double>(0));
-  kernel.rho = node.mean.dot(node.normal);
+  kernel.phi = node.phi;
+  kernel.theta = node.theta;
+  kernel.rho = node.rho;
 
   // Get indeces for the accumulator and make certain that they are
   // correct values

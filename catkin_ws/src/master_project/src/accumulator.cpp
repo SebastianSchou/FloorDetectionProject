@@ -1,22 +1,25 @@
 #include "master_project/accumulator.hpp"
 
 Accumulator::Accumulator(const double maxDistance,
+                         const double maxPhiAngle,
                          const float  rhoDeltaValue,
-                         const int    noOfPhiCells)
+                         const float  phiDeltaValue)
 {
   neighborSize = 27;
   thetaMax = PI2;
   phiMax = PI;
   maxVotes = 0;
   rhoDelta = rhoDeltaValue;
+  phiDelta = phiDeltaValue;
 
   // Set rho length to be dependent on plane distance and the desired
-  // distance difference planes should be voted in. Multiply distance
-  // with 1.1 to avoid having the furthest plane exceed rhoLength
+  // distance difference planes should be voted in, and the length of
+  // phi to be dependent on max plane angle and the desired angle
+  // difference planes should be voted in. Multiply max distance and angle
+  // with 1.1 to avoid having the extremes exceed the length
   rhoLength = std::ceil(maxDistance * 1.1 / rhoDelta);
-  phiLength = noOfPhiCells;
+  phiLength = std::ceil(maxPhiAngle * 1.1 / phiDelta);
   data.resize(phiLength + 1);
-  phiDelta = PI / (double)phiLength;
   for (int p = 0; p <= phiLength; p++) {
     double phi = (double)p / (double)phiLength * phiMax;
     int    length = std::max(1, (int)round((double)phiLength * 2.0 * sin(phi)));

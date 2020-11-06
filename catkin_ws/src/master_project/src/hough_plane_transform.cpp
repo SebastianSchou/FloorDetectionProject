@@ -10,7 +10,9 @@ HoughPlaneTransform::HoughPlaneTransform(CameraData& cameraData)
   root.divideIntoQuadrants();
   timeQuadtree = msUntilNow(start);
   float rhoDelta = 0.08; // [m]
-  accumulator = new Accumulator(root.maxPlaneDistance, rhoDelta, 30);
+  float phiDelta = 4.0 * PI / 180.0; // [radians]
+  accumulator = new Accumulator(root.maxPlaneDistance, root.maxPhiAngle,
+                                rhoDelta, phiDelta);
   voting(root, *accumulator, usedBins, usedKernels);
   timeVoting = msUntilNow(start) - timeQuadtree;
   peakDetection(planes, *accumulator, usedKernels, usedBins);

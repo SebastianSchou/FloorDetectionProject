@@ -33,7 +33,7 @@ public:
   Quadtree *root, *children;
   int samples, level;
   double areaThickness, minVariance, maxPlaneDistance, rootRepresentativeness,
-         sampleDensity;
+         sampleDensity, maxPhiAngle, rho, phi, theta;
   SummedAreaTable sat;
   std::vector<Quadtree *> planes, nonPlanes;
   std::vector<std::vector<double> > validCoordinates;
