@@ -31,7 +31,7 @@ public:
   cv::Mat covariance, normal, mean, color;
   cv::Point minBounds, maxBounds;
   Quadtree *root, *children;
-  int samples, level;
+  int samples, level, id, idNo;
   double areaThickness, minVariance, maxPlaneDistance, rootRepresentativeness,
          sampleDensity, maxPhiAngle, rho, phi, theta;
   SummedAreaTable sat;

@@ -29,6 +29,8 @@ Quadtree::Quadtree()
   rootRepresentativeness = 0.0;
   sampleDensity = 0.0;
   rho = 0.0; phi = 0.0; theta = 0.0;
+  id = 0;
+  idNo = 0;
   setMinSamplesInNode(25);
   setMaxPlaneThickness(0.36);
 }
@@ -111,6 +113,7 @@ void Quadtree::divideIntoQuadrants()
   for (int i = 0; i < 4; i++) {
     children[i].root = root;
     children[i].level = level + 1;
+    children[i].id = root->idNo++;
     children[i].divideIntoQuadrants();
   }
 }
@@ -194,6 +197,8 @@ void Quadtree::initializeRoot(const CameraData& cameraData)
 {
   root = this;
   level = 0;
+  id = 0;
+  idNo++;
   minBounds = cv::Point(0, 0);
   maxBounds = cv::Point(cameraData.width - 1, cameraData.height - 1);
 
