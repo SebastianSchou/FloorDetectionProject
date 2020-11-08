@@ -1,6 +1,7 @@
 #include "master_project/accumulator.hpp"
 #include "master_project/kernel.hpp"
 #include "master_project/plane.hpp"
+#include "master_project/plane_analysis.hpp"
 
 inline void peakDetection(std::vector<Plane> & planes,
                           Accumulator        & accum,
@@ -69,6 +70,21 @@ inline void peakDetection(std::vector<Plane> & planes,
     accum.getValues(plane.theta, plane.phi, plane.rho, cell->thetaIndex,
                     cell->phiIndex, cell->rhoIndex);
 
+    // Get normal vector and plane position
+    plane.normal.at<double>(0) = std::sin(plane.phi) * std::cos(plane.theta);
+    plane.normal.at<double>(1) = std::sin(plane.phi) * std::sin(plane.theta);
+    plane.normal.at<double>(2) = std::cos(plane.phi);
+    plane.position = plane.normal * plane.rho;
+
+    // Calculate phi and theta for absolute values of the normal vector
+    plane.thetaAbs = (std::abs(plane.theta) < MAX_ANGLE_DIFFERENCE) ?
+                     std::atan2(std::abs(plane.normal.at<double>(1)),
+                                std::abs(plane.normal.at<double>(0))) :
+                     plane.theta;
+    plane.phiAbs = (std::abs(plane.phi) < MAX_ANGLE_DIFFERENCE) ?
+                   std::acos(std::abs(plane.normal.at<double>(2))) :
+                   plane.phi;
+
     std::move(cell->votedNotes.begin(), cell->votedNotes.end(),
               std::inserter(plane.nodes, plane.nodes.end()));
     plane.rootRepresentativeness = 0;
@@ -77,8 +93,18 @@ inline void peakDetection(std::vector<Plane> & planes,
     plane.thetaIndex = cell->thetaIndex;
     plane.phiIndex = cell->phiIndex;
     plane.rhoIndex = cell->rhoIndex;
-    plane.computePlaneParameters();
-    if (plane.samples > 100) {
+    bool skip = false;
+    for (Plane& prevPlane : planes) {
+      if (PlaneAnalysis::isSimilar(prevPlane, plane)) {
+        PlaneAnalysis::transferNodes(prevPlane, plane);
+        skip = true;
+      }
+    }
+    if (skip) {
+      continue;
+    }
+    plane.computePlaneParameters(planes);
+    if (plane.samples > 500) {
       planes.push_back(plane);
     }
   }
