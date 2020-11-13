@@ -64,6 +64,7 @@ inline void peakDetection(std::vector<Plane> & planes,
   }
 
   // Compute plane for every peak cell
+  int planeId = 0;
   for (AccumulatorCell *cell : peakCells) {
     Plane plane;
 
@@ -103,6 +104,7 @@ inline void peakDetection(std::vector<Plane> & planes,
     if (skip) {
       continue;
     }
+    plane.id = planeId++;
     plane.computePlaneParameters(planes);
     if (plane.samples > 500) {
       planes.push_back(plane);

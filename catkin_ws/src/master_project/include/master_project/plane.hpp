@@ -126,7 +126,7 @@ public:
 
   double theta, phi, rho, votes, rootRepresentativeness, rotate, thetaIndex,
          thetaAbs, phiAbs;
-  int phiIndex, rhoIndex, samples;
+  int phiIndex, rhoIndex, samples, id;
   bool isShowing;
   cv::Mat cross, cross2, position, mean, normal, color;
   std::vector<std::vector<double> > validCoordinates;

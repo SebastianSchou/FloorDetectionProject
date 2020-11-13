@@ -93,17 +93,17 @@ void HoughPlaneTransform::printPlanesInformation()
 
 void HoughPlaneTransform::printPlaneInformation(const Plane& plane)
 {
-  printf("Samples: %d, nodes: %ld, normal: [%.3f, %.3f, %.3f], "
+  printf("Plane %d:\nSamples: %d, nodes: %ld, normal: [%.3f, %.3f, %.3f], "
          "position: [%.3f, %.3f, %.3f]\n"
          "Distance to plane: %.3f, phi: %.3f, theta: %.3f\n",
-         plane.samples, plane.nodes.size(),
+         plane.id, plane.samples, plane.nodes.size(),
          plane.normal.at<double>(0), plane.normal.at<double>(1),
          plane.normal.at<double>(2), plane.position.at<double>(0),
          plane.position.at<double>(1), plane.position.at<double>(2),
          plane.rho, plane.phi, plane.theta);
   for (const Quadtree *node : plane.nodes) {
-    printf("  Node at (%d, %d) to (%d, %d) with %d samples:\n",
-           node->minBounds.x * decimationFactor,
+    printf("  Node %d at (%d, %d) to (%d, %d) with %d samples:\n",
+           node->id, node->minBounds.x * decimationFactor,
            node->minBounds.y * decimationFactor,
            node->maxBounds.x * decimationFactor,
            node->maxBounds.y * decimationFactor,
