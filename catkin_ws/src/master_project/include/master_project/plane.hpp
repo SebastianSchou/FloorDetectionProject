@@ -3,6 +3,7 @@
 
 #include <master_project/quadtree.hpp>
 #include <master_project/helper_function.hpp>
+#include <algorithm>
 
 #define MIN_INDEPENDENT_NODE_SIZE 50
 
@@ -28,7 +29,8 @@ public:
   void computePlaneParameters(std::vector<Plane>& planes)
   {
     // Get cross product of normal vector???)
-    double  v[3] = { 0.0, 0.0, 1.0 };
+    double v[3] = { 0.0, 0.0, 1.0 };
+
     cv::Mat cu(cv::Size(1, 3), CV_64F, v);
     if (isMatEqual(cu, normal)) {
       v[0] = 1.0; v[2] = 0.0;
@@ -38,27 +40,38 @@ public:
     cross2 = normal.mul(cross);
 
     // Get nodes representing the plane
-    for (Quadtree *node : nodes) {
+    for (size_t i = 0; i < nodes.size(); i++) {
+      Quadtree *node = nodes[i];
       if (node->samples < MIN_INDEPENDENT_NODE_SIZE) {
         if (!hasNeighbor(node)) {
-          nodes.erase(node);
+          if (nodes.size() <= 1) {
+            return;
+          }
+          nodes.erase(nodes.begin() + i);
+          i--;
           continue;
         }
       }
       bool skip = false;
       if (planes.size() > 0) {
         for (Plane& plane : planes) {
-          if (plane.nodes.find(node) != plane.nodes.end()) {
+          std::vector<Quadtree *>::iterator j =
+            find(plane.nodes.begin(), plane.nodes.end(), node);
+          if (j != plane.nodes.end()) {
             if (leastSquareError(plane, *node) <
                 leastSquareError(*this, *node)) {
-              nodes.erase(node);
               skip = true;
+              if (nodes.size() <= 1) {
+                return;
+              }
+              nodes.erase(nodes.begin() + i);
+              i--;
               break;
             } else {
               plane.rootRepresentativeness -= node->rootRepresentativeness;
               plane.mean -= node->mean;
               plane.samples -= node->samples;
-              plane.nodes.erase(node);
+              plane.nodes.erase(j);
             }
           }
         }
@@ -131,7 +144,7 @@ public:
   cv::Mat cross, cross2, position, mean, normal, color;
   std::vector<std::vector<double> > validCoordinates;
   std::vector<std::vector<int> > validPixels;
-  std::set<Quadtree *> nodes;
+  std::vector<Quadtree *> nodes;
 };
 
 #endif // PLANE_HPP

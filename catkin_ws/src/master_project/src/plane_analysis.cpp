@@ -52,9 +52,14 @@ bool PlaneAnalysis::isSimilar(const Plane& plane1, const Plane& plane2)
 
 void PlaneAnalysis::transferNodes(Plane& plane1, Plane& plane2)
 {
-  for (Quadtree *node : plane2.nodes) {
-    if (plane1.nodes.find(node) != plane1.nodes.end()) {
-      plane2.nodes.erase(node);
+  for (size_t i = 0; i < plane2.nodes.size(); i++) {
+    Quadtree *node = plane2.nodes[i];
+    if (find(plane1.nodes.begin(), plane1.nodes.end(),
+             node) != plane1.nodes.end()) {
+      if (plane2.nodes.size() <= 1) {
+        return;
+      }
+      plane2.nodes.erase(plane2.nodes.begin() + i);
       continue;
     } else {
       plane1.rootRepresentativeness += node->rootRepresentativeness;
