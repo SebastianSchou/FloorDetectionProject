@@ -4,7 +4,8 @@
 #include "master_project/summed_area_table.hpp"
 #include "master_project/camera_data.hpp"
 
-#define MAX_DISTANCE 10.0 // [m]
+#define MAX_DISTANCE 10.0  // [m]
+#define MIN_DISTANCE 0.195 // [m]
 
 class Quadtree {
 public:

@@ -212,7 +212,7 @@ void Quadtree::initializeRoot(CameraData& cameraData)
       double z = cameraData.depthData.at<float>(r, c);
 
       // Ignore points where distance is 0 or above 10 m
-      if ((z > 0) && (z < MAX_DISTANCE)) {
+      if ((z > MIN_DISTANCE) && (z < MAX_DISTANCE)) {
         // Calculate x and y using z and the depth cameras intrinsics
         double scaleSize = cameraData.filterVariables.decimationScaleFactor;
         double ppx = cameraData.intrinsics.ppx / scaleSize;
