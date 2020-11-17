@@ -3,9 +3,10 @@
 
 #include <master_project/quadtree.hpp>
 #include <master_project/helper_function.hpp>
-#include <algorithm>
+#include <mutex>
 
 #define MIN_INDEPENDENT_NODE_SIZE 50
+#define POINT_DELTA 2
 
 class Plane {
 public:
@@ -69,7 +70,7 @@ public:
               break;
             } else {
               plane.rootRepresentativeness -= node->rootRepresentativeness;
-              plane.mean -= node->mean;
+              plane.mean -= node->mean / plane.nodes.size();
               plane.samples -= node->samples;
               plane.nodes.erase(j);
             }
@@ -137,14 +138,43 @@ public:
     return std::abs((point - position).dot(normalizeVector(normal)));
   }
 
+  void insert3dPoint(const cv::Vec3d& point, std::mutex& mutex)
+  {
+    std::lock_guard<std::mutex> lock(mutex);
+    points3d.push_back(point);
+  }
+
+  void insert2dPoint(const cv::Vec2i& point, std::mutex& mutex)
+  {
+    std::lock_guard<std::mutex> lock(mutex);
+    points2d.push_back(point);
+  }
+
+  void setImagePoint(const cv::Vec2i& point)
+  {
+    cv::Point p1(point[1] - std::floor(POINT_DELTA / 2),
+                 point[0] - std::floor(POINT_DELTA / 2)),
+    p2(point[1] + std::ceil(POINT_DELTA / 2),
+       point[0] + std::ceil(POINT_DELTA / 2));
+    cv::rectangle(image2dPoints, p1, p2, cv::Scalar::all(255), cv::FILLED);
+  }
+
+  void setImageArea(const cv::Point& p1, const cv::Point& p2)
+  {
+    cv::rectangle(image2dPoints, p1, p2, cv::Scalar::all(255), cv::FILLED);
+  }
+
   double theta, phi, rho, votes, rootRepresentativeness, rotate, thetaIndex,
          thetaAbs, phiAbs;
   int phiIndex, rhoIndex, samples, id;
   bool isShowing;
-  cv::Mat cross, cross2, position, mean, normal, color;
+  cv::Mat cross, cross2, position, mean, normal, color, image2dPoints,
+          image3dPoints;
   std::vector<std::vector<double> > validCoordinates;
   std::vector<std::vector<int> > validPixels;
   std::vector<Quadtree *> nodes;
+  std::vector<cv::Vec3d> points3d;
+  std::vector<cv::Vec2i> points2d;
 };
 
 #endif // PLANE_HPP

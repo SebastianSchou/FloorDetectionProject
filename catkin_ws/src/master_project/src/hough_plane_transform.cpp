@@ -25,58 +25,6 @@ HoughPlaneTransform::~HoughPlaneTransform()
 {
 }
 
-void HoughPlaneTransform::assignColorToPlane(Plane& plane, int r, int g, int b)
-{
-  cv::Mat color(cv::Size(3, 1), CV_8U, cv::Scalar(0));
-
-  // Saturate the color values between 0 and 255
-  r = std::max(0, std::min(255, r));
-  g = std::max(0, std::min(255, g));
-  b = std::max(0, std::min(255, b));
-
-  // Assign to each node in plane
-  color.at<uchar>(0) = r;
-  color.at<uchar>(1) = g;
-  color.at<uchar>(2) = b;
-  plane.color = color;
-  for (Quadtree *node : plane.nodes) {
-    node->color = color;
-  }
-}
-
-void HoughPlaneTransform::assignColorToPlanes()
-{
-  for (unsigned int i = 0; i < planes.size(); i++) {
-    int colorValue = (int)(255 / (int)(i / 6 + 1));
-    cv::Mat color(cv::Size(1, 3), CV_8U, cv::Scalar::all(0));
-    if ((planes[i].color.at<uchar>(0) != 0) ||
-        (planes[i].color.at<uchar>(1) != 0) ||
-        (planes[i].color.at<uchar>(2) != 0)) {
-      continue;
-    }
-    switch (i % 6) {
-      case 0:
-        assignColorToPlane(planes[i], colorValue, 0, 0);
-        break;
-      case 1:
-        assignColorToPlane(planes[i], 0, colorValue, 0);
-        break;
-      case 2:
-        assignColorToPlane(planes[i], 0, 0, colorValue);
-        break;
-      case 3:
-        assignColorToPlane(planes[i], 0, colorValue, colorValue);
-        break;
-      case 4:
-        assignColorToPlane(planes[i], colorValue, 0, colorValue);
-        break;
-      case 5:
-        assignColorToPlane(planes[i], colorValue, colorValue, colorValue);
-        break;
-    }
-  }
-}
-
 void HoughPlaneTransform::printTimePartition()
 {
   ROS_INFO("Quadtree: %.3f ms. Voting: %.3f ms. Peak detection: %.3f ms",

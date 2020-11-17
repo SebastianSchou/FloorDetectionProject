@@ -11,7 +11,6 @@
 #define MIN_EIGENVALUE_INDEX 2
 #define MIN_SAMPLE_DENSITY 0.9 // [%]
 #define MAX_GRADIANT_SUM 60.0  // [m]
-#define MAX_DISTANCE 10.0      // [m]
 
 Quadtree::Quadtree()
 {
@@ -193,7 +192,7 @@ void Quadtree::computeCovariance()
   covariance = cov;
 }
 
-void Quadtree::initializeRoot(const CameraData& cameraData)
+void Quadtree::initializeRoot(CameraData& cameraData)
 {
   root = this;
   level = 0;
@@ -201,6 +200,8 @@ void Quadtree::initializeRoot(const CameraData& cameraData)
   idNo++;
   minBounds = cv::Point(0, 0);
   maxBounds = cv::Point(cameraData.width - 1, cameraData.height - 1);
+  cameraData.data3d = cv::Mat(cv::Size(cameraData.width, cameraData.height),
+                              CV_64FC3, cv::Scalar::all(0));
 
   // Make summed-area table with x, y, z coordinates and their products
   sat = SummedAreaTable(cameraData.height, cameraData.width);
@@ -220,6 +221,7 @@ void Quadtree::initializeRoot(const CameraData& cameraData)
         double fy = cameraData.intrinsics.fy / scaleSize;
         double x = (c - ppx) * z / fx;
         double y = (r - ppy) * z / fy;
+        cameraData.data3d.at<cv::Vec3d>(r, c) = cv::Vec3d(x, y, z);
 
         // Calculate gradient
         double sobelX = getSobelGradientX(cameraData.depthData, r, c);

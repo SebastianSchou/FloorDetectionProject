@@ -54,7 +54,7 @@ int main(int argc, char **argv)
     Plane floor = PlaneAnalysis::getGroundPlane(planes);
 
     if (floor.rho != 0.0) {
-      houghPlaneTransform.assignColorToPlane(floor, 0, 0, 255);
+      DrawingFunctions::assignColorToPlane(floor, 0, 0, 255);
     }
 
     // houghPlaneTransform.printTimePartition();
@@ -68,7 +68,7 @@ int main(int argc, char **argv)
     // Draw illustrations
     DrawingFunctions::drawQuadtreeBorders(cameraData.colorizedDepthImage,
                                           houghPlaneTransform.root);
-    houghPlaneTransform.assignColorToPlanes();
+    DrawingFunctions::assignColorToPlanes(planes);
     DrawingFunctions::drawPlanesInQuadtree(cameraData.depthAlignedColorImage,
                                            houghPlaneTransform.root,
                                            cameraData);

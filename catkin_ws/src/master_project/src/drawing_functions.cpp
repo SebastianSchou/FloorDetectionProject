@@ -46,6 +46,20 @@ void DrawingFunctions::drawQuadtreeBorders(cv::Mat& image, Quadtree& node)
   }
 }
 
+void DrawingFunctions::drawOnlyPlaneQuadtreeBorders(cv::Mat           & image,
+                                                    std::vector<Plane>& planes,
+                                                    CameraData        & cameraData)
+{
+  int scale = cameraData.filterVariables.decimationScaleFactor;
+
+  for (const Plane& plane : planes) {
+    for (const Quadtree *node : plane.nodes) {
+      cv::rectangle(image, node->minBounds * scale, node->maxBounds * scale,
+                    cv::Scalar(200, 200, 200), 1);
+    }
+  }
+}
+
 cv::Mat DrawingFunctions::drawAccumulatorCellVotes(const int          height,
                                                    const int          width,
                                                    const Accumulator& accumulator,
@@ -114,26 +128,119 @@ void DrawingFunctions::drawPlanesInQuadtree(cv::Mat   & image,
                                             Quadtree  & node,
                                             CameraData& cameraData)
 {
-  if (node.isPlane) {
+  int scale = cameraData.filterVariables.decimationScaleFactor;
+  double r = node.color.at<uchar>(0), g = node.color.at<uchar>(1),
+         b = node.color.at<uchar>(2);
+
+  if (node.isPlane && ((r != 0) || (g != 0) || (b != 0))) {
     cv::Mat rect(image.rows, image.cols, CV_8UC3, cv::Scalar::all(0));
-    double  r = node.color.at<uchar>(0), g = node.color.at<uchar>(1),
-            b = node.color.at<uchar>(2);
+
 
     cv::rectangle(rect,
-                  node.minBounds * cameraData.filterVariables.decimationScaleFactor,
-                  node.maxBounds * cameraData.filterVariables.decimationScaleFactor,
+                  node.minBounds * scale,
+                  node.maxBounds * scale,
                   cv::Scalar(r, g, b),
                   cv::FILLED);
-    cv::addWeighted(image, 1.0, rect, 0.5, 0.0, image);
+    cv::rectangle(rect,
+                  node.minBounds * scale,
+                  node.maxBounds * scale,
+                  cv::Scalar::all(125),
+                  1);
+    cv::addWeighted(image, 1.0, rect, 0.8, 0.0, image);
   }
-  cv::rectangle(image,
-                node.minBounds * cameraData.filterVariables.decimationScaleFactor,
-                node.maxBounds * cameraData.filterVariables.decimationScaleFactor,
-                cv::Scalar(255, 0, 0),
-                1);
   if (node.children != NULL) {
     for (int i = 0; i < 4; i++) {
       drawPlanesInQuadtree(image, node.children[i], cameraData);
     }
   }
+}
+
+void DrawingFunctions::assignColorToPlane(Plane& plane, int r, int g, int b)
+{
+  cv::Mat color(cv::Size(3, 1), CV_8U, cv::Scalar(0));
+
+  // Saturate the color values between 0 and 255
+  r = std::max(0, std::min(255, r));
+  g = std::max(0, std::min(255, g));
+  b = std::max(0, std::min(255, b));
+
+  // Assign to each node in plane
+  color.at<uchar>(0) = r;
+  color.at<uchar>(1) = g;
+  color.at<uchar>(2) = b;
+  plane.color = color;
+  for (Quadtree *node : plane.nodes) {
+    node->color = color;
+  }
+}
+
+void DrawingFunctions::assignColorToPlanes(std::vector<Plane>& planes)
+{
+  for (unsigned int i = 0; i < planes.size(); i++) {
+    int colorValue = (int)(255 / (int)(i / 6 + 1));
+    cv::Mat color(cv::Size(1, 3), CV_8U, cv::Scalar::all(0));
+    if ((planes[i].color.at<uchar>(0) != 0) ||
+        (planes[i].color.at<uchar>(1) != 0) ||
+        (planes[i].color.at<uchar>(2) != 0)) {
+      continue;
+    }
+    switch (i % 6) {
+      case 0:
+        assignColorToPlane(planes[i], colorValue, 0, 0);
+        break;
+      case 1:
+        assignColorToPlane(planes[i], 0, colorValue, 0);
+        break;
+      case 2:
+        assignColorToPlane(planes[i], 0, 0, colorValue);
+        break;
+      case 3:
+        assignColorToPlane(planes[i], 0, colorValue, colorValue);
+        break;
+      case 4:
+        assignColorToPlane(planes[i], colorValue, 0, colorValue);
+        break;
+      case 5:
+        assignColorToPlane(planes[i], colorValue, colorValue, colorValue);
+        break;
+    }
+  }
+}
+
+void DrawingFunctions::drawPlanePoints(cv::Mat          & image,
+                                       std::vector<Plane> planes,
+                                       CameraData       & cameraData)
+{
+  int scale = cameraData.filterVariables.decimationScaleFactor;
+
+  cv::Mat rect(image.rows, image.cols, CV_8UC3, cv::Scalar::all(0));
+  for (const Plane& plane : planes) {
+    uchar r = plane.color.at<uchar>(0),
+                    g = plane.color.at<uchar>(1),
+                    b = plane.color.at<uchar>(2);
+    for (const cv::Vec2i point : plane.points2d) {
+      int col = point[0] * scale, row = point[1] * scale;
+      cv::Point p1(row, col), p2(row + scale * 2, col + scale * 2);
+      cv::rectangle(rect, p1, p2, cv::Scalar(r, g, b), cv::FILLED);
+    }
+  }
+  cv::addWeighted(image, 1.0, rect, 0.8, 0.0, image);
+}
+
+void DrawingFunctions::drawPlanes(cv::Mat                 & image,
+                                  const std::vector<Plane>& planes)
+{
+  cv::Mat im;
+  if (planes.size() == 0) {
+    return;
+  }
+  im = cv::Mat::zeros(planes[0].image2dPoints.size(), CV_8UC3);
+  for (const Plane& plane : planes) {
+    uchar r = plane.color.at<uchar>(0),
+                    g = plane.color.at<uchar>(1),
+                    b = plane.color.at<uchar>(2);
+    im.setTo(cv::Scalar(r, g, b), plane.image2dPoints);
+  }
+  cv::resize(im, im, im.size() * 4);
+  cv::addWeighted(image, 1.0, im, 0.8, 0.0, image);
 }

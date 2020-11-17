@@ -4,6 +4,8 @@
 #include "master_project/summed_area_table.hpp"
 #include "master_project/camera_data.hpp"
 
+#define MAX_DISTANCE 10.0 // [m]
+
 class Quadtree {
 public:
 
@@ -22,7 +24,7 @@ public:
                                  const int c);
   float        getSobelGradientY(const cv::Mat& depth, const int r,
                                  const int c);
-  void         initializeRoot(const CameraData& cameraData);
+  void         initializeRoot(CameraData& cameraData);
   void         setMaxPlaneThickness(const double maxPlaneThickness);
   const double getMaxPlaneThickness() const;
   void         setMinSamplesInNode(const int minSamplesInNode);
