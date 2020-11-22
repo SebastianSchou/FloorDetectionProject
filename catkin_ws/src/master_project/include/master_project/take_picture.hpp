@@ -7,22 +7,21 @@
 #define EXIT_ERROR -1
 
 void saveDepthData(const std::string& filename,
-                   cv::Mat depthData,
-                   const int height, const int width)
+                   cv::Mat depthData)
 {
   cv::FileStorage file(filename, cv::FileStorage::WRITE);
   file << "depth" << depthData;
   file.release();
 }
 
-int takePicture(int argc, char **argv, int width, int height, int fps, const std::string& filepath)
+int takePicture(int argc, char **argv, const std::string& filepath)
 {
   // Initialize ros
   ros::init(argc, argv, "take_picture");
   ros::NodeHandle nh;
 
   // Init Intel RealSense camera
-  CameraData cameraData(width, height, fps);
+  CameraData cameraData;
   if (!cameraData.initializeCamera()) {
     return EXIT_ERROR;
   }
@@ -60,7 +59,7 @@ int takePicture(int argc, char **argv, int width, int height, int fps, const std
       cv::imwrite(filenameDepthColor, cameraData.depthAlignedColorImage, compression_params);
 
       // Save depth data
-      saveDepthData(filenameDepth, cameraData.depthData, cameraData.height, cameraData.width);
+      saveDepthData(filenameDepth, cameraData.depthData);
 
       printf("Image saved as '%s'\n", name.c_str());
     }

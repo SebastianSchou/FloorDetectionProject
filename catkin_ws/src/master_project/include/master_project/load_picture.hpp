@@ -10,8 +10,7 @@ float leastSquareError(const float v1, const float v2)
   return square(v1 - v2);
 }
 
-int loadPicture(int argc, char **argv, int width, int height, int fps,
-                const std::string& filePath)
+int loadPicture(int argc, char **argv, const std::string& filePath)
 {
   // Initialize ros
   ros::init(argc, argv, "take_picture");
@@ -27,7 +26,7 @@ int loadPicture(int argc, char **argv, int width, int height, int fps,
   }
 
   // Init Intel RealSense camera
-  CameraData cameraData(width, height, fps);
+  CameraData cameraData;
   if (!cameraData.initializeCamera()) {
     return EXIT_ERROR;
   }

@@ -9,20 +9,14 @@
 
 #define EXIT_SUCCESS 0
 #define EXIT_ERROR -1
-#define IMAGE_WIDTH_DEPTH 848
-#define IMAGE_WIDTH 640
-#define IMAGE_HEIGHT 480
-#define CAPTURED_FRAMES_PER_SECONDS 15
 #define FILE_PATH "/home/sebastian/Master/images/"
 
 int main(int argc, char **argv)
 {
   if (std::string(argv[1]) == "--take_picture") {
-    return takePicture(argc, argv, IMAGE_WIDTH_DEPTH, IMAGE_HEIGHT,
-                       CAPTURED_FRAMES_PER_SECONDS, FILE_PATH);
+    return takePicture(argc, argv, FILE_PATH);
   } else if (std::string(argv[1]) == "--load_picture") {
-    return loadPicture(argc, argv, IMAGE_WIDTH_DEPTH, IMAGE_HEIGHT,
-                     CAPTURED_FRAMES_PER_SECONDS, FILE_PATH);
+    return loadPicture(argc, argv, FILE_PATH);
   }
 
   // Initialize ros
@@ -30,8 +24,7 @@ int main(int argc, char **argv)
   ros::NodeHandle nh;
 
   // Init Intel RealSense camera
-  CameraData cameraData(IMAGE_WIDTH_DEPTH, IMAGE_HEIGHT,
-                        CAPTURED_FRAMES_PER_SECONDS);
+  CameraData cameraData;
   if (!cameraData.initializeCamera()) {
     return EXIT_ERROR;
   }
@@ -73,7 +66,7 @@ int main(int argc, char **argv)
                                            houghPlaneTransform.root,
                                            cameraData);
     cv::Mat accumDrawing = DrawingFunctions::drawAccumulatorCellVotes(
-      IMAGE_WIDTH_DEPTH, IMAGE_HEIGHT, *houghPlaneTransform.accumulator);
+      IMAGE_WIDTH, IMAGE_HEIGHT, *houghPlaneTransform.accumulator);
 
     // Show data
     cv::imshow("Realsense depth", cameraData.colorizedDepthImage);

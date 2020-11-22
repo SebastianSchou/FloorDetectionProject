@@ -1,11 +1,10 @@
 #include "master_project/camera_data.hpp"
 #include "ros/ros.h"
 
-CameraData::CameraData(int width, int height, int fps)
+#define FRAMES_PER_SECOND 15
+
+CameraData::CameraData()
 {
-  imageWidth = width;
-  imageHeight = height;
-  cameraFps = fps;
 }
 
 bool CameraData::initializeCamera()
@@ -25,21 +24,26 @@ bool CameraData::initializeCamera()
   ROS_INFO("Initializing Realsense D435 camera.");
 
   config.enable_stream(RS2_STREAM_COLOR,
-                       imageWidth,
-                       imageHeight,
+                       IMAGE_WIDTH,
+                       IMAGE_HEIGHT,
                        RS2_FORMAT_BGR8,
-                       cameraFps);
+                       FRAMES_PER_SECOND);
   config.enable_stream(RS2_STREAM_DEPTH,
-                       imageWidth,
-                       imageHeight,
+                       IMAGE_WIDTH,
+                       IMAGE_HEIGHT,
                        RS2_FORMAT_Z16,
-                       cameraFps);
+                       FRAMES_PER_SECOND);
   config.enable_stream(RS2_STREAM_INFRARED,
-                       imageWidth,
-                       imageHeight,
+                       IMAGE_WIDTH,
+                       IMAGE_HEIGHT,
                        RS2_FORMAT_Y8,
-                       cameraFps);
-  profile = pipe.start(config);
+                       FRAMES_PER_SECOND);
+  try {
+    profile = pipe.start(config);
+  } catch (rs2::error errorMsg) {
+    ROS_ERROR("Could not start Realsense camera pipe: %s", errorMsg.what());
+    return false;
+  }
 
   // Get depth scale
   rs2::device device = profile.get_device();
@@ -53,8 +57,8 @@ bool CameraData::initializeCamera()
   // Decimation filter reduces depth frame density
   decimationFilter.set_option(RS2_OPTION_FILTER_MAGNITUDE,
                               filterVariables.decimationScaleFactor);
-  if ((imageWidth % filterVariables.decimationScaleFactor != 0) ||
-      (imageHeight % filterVariables.decimationScaleFactor != 0)) {
+  if ((IMAGE_WIDTH % filterVariables.decimationScaleFactor != 0) ||
+      (IMAGE_HEIGHT % filterVariables.decimationScaleFactor != 0)) {
     ROS_WARN("The image width and/or height are not multiples of the"
              " decimation scale factor. This can result in errors in shown"
              " images, but has no effect on the result.");
@@ -72,7 +76,7 @@ bool CameraData::initializeCamera()
 
   // Allow autoexposure to settle
   try {
-    for (auto i = 0; i < cameraFps; ++i) {
+    for (auto i = 0; i < FRAMES_PER_SECOND; i++) {
       pipe.wait_for_frames(timeout);
     }
   } catch (...) {
@@ -137,13 +141,13 @@ bool CameraData::processFrames()
 
   // Convert to Mat for OpenCV use
   // Color image aligned to depth
-  depthAlignedColorImage = cv::Mat(cv::Size(imageWidth, imageHeight),
+  depthAlignedColorImage = cv::Mat(cv::Size(IMAGE_WIDTH, IMAGE_HEIGHT),
                                    CV_8UC3,
                                    (void *)color.get_data(),
                                    cv::Mat::AUTO_STEP);
 
   // Regular color image
-  normalColorImage = cv::Mat(cv::Size(imageWidth, imageHeight),
+  normalColorImage = cv::Mat(cv::Size(IMAGE_WIDTH, IMAGE_HEIGHT),
                              CV_8UC3,
                              (void *)colorNormal.get_data(),
                              cv::Mat::AUTO_STEP);
@@ -155,7 +159,7 @@ bool CameraData::processFrames()
                                 cv::Mat::AUTO_STEP);
 
   // IR image
-  irImage = cv::Mat(cv::Size(imageWidth, imageHeight),
+  irImage = cv::Mat(cv::Size(IMAGE_WIDTH, IMAGE_HEIGHT),
                     CV_8UC1,
                     (void *)ir.get_data(),
                     cv::Mat::AUTO_STEP);;
@@ -174,8 +178,8 @@ bool CameraData::processFrames()
 
 bool CameraData::loadImage(const std::string& filename)
 {
-  width = imageWidth / filterVariables.decimationScaleFactor;
-  height = imageHeight / filterVariables.decimationScaleFactor;
+  width = DEPTH_WIDTH;
+  height = DEPTH_HEIGHT;
   cv::FileStorage file(filename + "_depth.xml", cv::FileStorage::READ);
   if (!file.isOpened()) {
     ROS_ERROR("File %s could not be opened.",

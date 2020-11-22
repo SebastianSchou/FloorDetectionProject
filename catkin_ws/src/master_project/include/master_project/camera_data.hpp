@@ -12,7 +12,7 @@
 #define DEPTH_HEIGHT IMAGE_HEIGHT / IMAGE_SCALE
 
 struct FilterVariables {
-  int decimationScaleFactor = 4,
+  int decimationScaleFactor = IMAGE_SCALE,
       spatialHoleFillingMode = 4,
       temporalSmoothDelta = 20,
       temporalPersistencyMode = 2;
@@ -22,7 +22,7 @@ struct FilterVariables {
 class CameraData {
 public:
 
-  CameraData(int width, int height, int fps);
+  CameraData();
   bool initializeCamera();
   bool processFrames();
   bool loadImage(const std::string& filename);
@@ -46,7 +46,7 @@ private:
   rs2::decimation_filter decimationFilter;
   rs2::colorizer colorMap;
   rs2::frameset frames;
-  int imageWidth, imageHeight, cameraFps, timeout = 5000;
+  int timeout = 5000;
   float depthScale;
 };
 
