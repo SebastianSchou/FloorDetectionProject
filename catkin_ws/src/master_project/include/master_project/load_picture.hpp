@@ -5,11 +5,6 @@
 #define EXIT_SUCCESS 0
 #define EXIT_ERROR -1
 
-float leastSquareError(const float v1, const float v2)
-{
-  return square(v1 - v2);
-}
-
 int loadPicture(int argc, char **argv, const std::string& filePath)
 {
   // Initialize ros
