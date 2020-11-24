@@ -203,10 +203,12 @@ cv::Mat PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
     );
 
   // Remove small holes in the plane points using structured elements and a
-  // dilation / erosion combo
+  // open / close combo
   cv::Mat stucturingElement = cv::getStructuringElement(cv::MORPH_RECT,
                                                         cv::Size(3, 3));
   for (Plane& plane : planes) {
+    cv::morphologyEx(plane.image2dPoints, plane.image2dPoints,
+                     cv::MORPH_OPEN, stucturingElement);
     cv::morphologyEx(plane.image2dPoints, plane.image2dPoints,
                      cv::MORPH_CLOSE, stucturingElement);
     nonPlanePoints -= plane.image2dPoints;
