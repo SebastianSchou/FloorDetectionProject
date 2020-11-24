@@ -21,5 +21,7 @@ cv::Mat computePlanePoints(std::vector<Plane>& planes,
 void    calculateNewNormal(Plane& plane);
 void    mergeSimilarPlanes(std::vector<Plane>& planes);
 float   leastSquareError(const Plane& plane, const Quadtree& node);
+void 		printPlanesInformation(const std::vector<Plane>& planes);
+void 		printPlaneInformation(const Plane& plane);
 };
 #endif // PLANE_ANALYSIS_HPP

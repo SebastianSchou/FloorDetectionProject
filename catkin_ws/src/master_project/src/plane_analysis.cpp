@@ -288,3 +288,40 @@ void PlaneAnalysis::removeSmallPlanes(std::vector<Plane>& planes)
     }
   }
 }
+
+void PlaneAnalysis::printPlanesInformation(const std::vector<Plane>& planes)
+{
+  printf("=============PLANE INFORMATION=============\n");
+  for (const Plane& plane : planes) {
+    printPlaneInformation(plane);
+  }
+}
+
+void PlaneAnalysis::printPlaneInformation(const Plane& plane)
+{
+  printf("Plane %d:\nSamples: %d, nodes: %ld, normal: [%.3f, %.3f, %.3f], "
+         "position: [%.3f, %.3f, %.3f]\n"
+         "Distance to plane: %.3f, phi: %.3f, theta: %.3f\n",
+         plane.id, plane.samples, plane.nodes.size(),
+         plane.normal.at<double>(0), plane.normal.at<double>(1),
+         plane.normal.at<double>(2), plane.position.at<double>(0),
+         plane.position.at<double>(1), plane.position.at<double>(2),
+         plane.rho, plane.phi, plane.theta);
+  for (const Quadtree *node : plane.nodes) {
+    printf("  Node %d at (%d, %d) to (%d, %d) with %d samples:\n",
+           node->id, node->minBounds.x * IMAGE_SCALE,
+           node->minBounds.y * IMAGE_SCALE,
+           node->maxBounds.x * IMAGE_SCALE,
+           node->maxBounds.y * IMAGE_SCALE,
+           node->samples);
+    printf("    Normal: [%.3f, %.3f, %.3f], mean: [%.3f, %.3f, %.3f],"
+           " node distance: %.3f\n",
+           node->normal.at<double>(0),
+           node->normal.at<double>(1),
+           node->normal.at<double>(2),
+           node->mean.at<double>(0),
+           node->mean.at<double>(1),
+           node->mean.at<double>(2),
+           node->mean.dot(node->normal));
+  }
+}

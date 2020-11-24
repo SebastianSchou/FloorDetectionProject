@@ -148,7 +148,6 @@ add_executable(${PROJECT_NAME}
   src/drawing_functions.cpp
   src/accumulator.cpp
   src/voting.cpp
-  src/hough_plane_transform.cpp
   src/plane_analysis.cpp
   include/${PROJECT_NAME}/helper_function.hpp
   include/${PROJECT_NAME}/camera_data.hpp

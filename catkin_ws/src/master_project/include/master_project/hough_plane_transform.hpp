@@ -6,25 +6,43 @@
 #include "master_project/accumulator.hpp"
 #include "master_project/voting.hpp"
 #include "master_project/peak_detection.hpp"
+#include "master_project/plane_analysis.hpp"
 
 class HoughPlaneTransform {
 public:
+  HoughPlaneTransform(CameraData& cameraData,
+                      const bool printTime = false)
+  {
+    auto start = std::chrono::steady_clock::now();
 
-  HoughPlaneTransform(CameraData& cameraData);
-  ~HoughPlaneTransform();
-  void assignColorToPlanes();
-  void assignColorToPlane(Plane &plane, int r, int g, int b);
-  void printTimePartition();
-  void printPlanesInformation();
-  void printPlaneInformation(const Plane &plane);
+    root.initializeRoot(cameraData);
+    root.divideIntoQuadrants();
+    float timeQuadtree = msUntilNow(start);
+    float rhoDelta = 0.08;             // [m]
+    float phiDelta = 4.0 * PI / 180.0; // [radians]
+    accumulator = new Accumulator(root.maxPlaneDistance, root.maxPhiAngle,
+                                  rhoDelta, phiDelta);
+    voting(root, *accumulator, usedBins, usedKernels);
+    float timeVoting = msUntilNow(start) - timeQuadtree;
+    peakDetection(planes, *accumulator, usedKernels, usedBins);
+    PlaneAnalysis::removeSmallPlanes(planes);
+    std::sort(planes.begin(), planes.end());
+    float timePeak = msUntilNow(start) - timeQuadtree - timeVoting;
+    if (printTime) {
+      ROS_INFO("Quadtree: %.3f ms. Voting: %.3f ms. Peak detection: %.3f ms",
+               timeQuadtree, timeVoting, timePeak);  
+    }
+  }
+
+  ~HoughPlaneTransform()
+  {
+  }
 
   Quadtree root;
   Accumulator *accumulator;
   std::vector<Bin> usedBins;
   std::vector<Kernel> usedKernels;
   std::vector<Plane> planes;
-  double timeQuadtree, timeVoting, timePeak;
-  int decimationFactor;
 };
 
 #endif // HOUGH_PLANE_TRANSFORM_HPP
