@@ -4,6 +4,7 @@
 #define ACCEPTABLE_BEST_POINT_FIT 0.01 // [m]
 #define MAX_POINT_PLANE_NORMAL_DIFF 0.3
 #define ACCEPTABLE_BEST_NORMAL_DIFF 0.1
+#define MAX_PLANE_NORMAL_DIFF 0.15
 
 Plane PlaneAnalysis::getGroundPlane(std::vector<Plane>& planes)
 {
@@ -24,6 +25,11 @@ Plane PlaneAnalysis::getGroundPlane(std::vector<Plane>& planes)
     }
   }
   return floor;
+}
+
+bool PlaneAnalysis::hasSimilarNormal(const Plane& plane1, const Plane& plane2)
+{
+  return squareNorm(plane1.normal - plane2.normal) < MAX_PLANE_NORMAL_DIFF;
 }
 
 bool PlaneAnalysis::hasSimilarAngle(const Plane& plane1, const Plane& plane2)
@@ -76,6 +82,57 @@ void PlaneAnalysis::transferNodes(Plane& plane1, Plane& plane2)
             std::inserter(plane1.nodes, plane1.nodes.end()));
 }
 
+void PlaneAnalysis::calculateNewNormal(Plane& plane)
+{
+  cv::Mat normal(cv::Size(1, 3), CV_64F, cv::Scalar(0));
+  for (const Quadtree *node : plane.nodes) {
+    normal += node->normal;
+  }
+  normal /= plane.nodes.size();
+  plane.normal = normal;
+  plane.rho = plane.position.dot(plane.normal);
+  plane.phi = std::acos(plane.normal.at<double>(2));
+  plane.theta = std::atan2(plane.normal.at<double>(1),
+                           plane.normal.at<double>(0));
+}
+
+float PlaneAnalysis::leastSquareError(const Plane& plane, const Quadtree& node)
+{
+  return square(plane.rho - node.rho) + square(plane.phi - node.phi) +
+         square(std::abs(plane.theta) - std::abs(node.theta));
+}
+
+void PlaneAnalysis::mergeSimilarPlanes(std::vector<Plane>& planes)
+{
+  for (size_t i = 0; i < planes.size() - 1; i++) {
+    for (size_t j = i + 1; j < planes.size(); j++) {
+      if (PlaneAnalysis::hasSimilarNormal(planes[i], planes[j]) &&
+          PlaneAnalysis::hasSimilarDistance(planes[i], planes[j])) {
+        PlaneAnalysis::transferNodes(planes[i], planes[j]);
+        planes.erase(planes.begin() + j);
+        j--;
+        break;
+      }
+      for (size_t k = 0; k < planes[j].nodes.size(); k++) {
+        Quadtree *node = planes[j].nodes[k];
+        if (PlaneAnalysis::leastSquareError(planes[i], *node) <
+            PlaneAnalysis::leastSquareError(planes[j], *node)) {
+          planes[i].rootRepresentativeness += node->rootRepresentativeness;
+          planes[j].rootRepresentativeness -= node->rootRepresentativeness;
+          planes[i].samples += node->samples;
+          planes[j].samples -= node->samples;
+          planes[i].nodes.push_back(node);
+          planes[j].nodes.erase(planes[j].nodes.begin() + k);
+          k--;
+          break;
+        }
+      }
+    }
+  }
+}
+
+// void PlaneAnalysis::swapSimilarNodes(std::vector<Plane>& planes) {
+
 cv::Mat PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
                                           const CameraData  & cameraData)
 {
@@ -89,19 +146,23 @@ cv::Mat PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
   cv::Mat nonPlanePoints(cv::Size(cameraData.width, cameraData.height),
                          CV_8U, cv::Scalar::all(0));
 
-  // Set points for all nodes
+  // Initialize planes
   for (Plane& plane : planes) {
-    cv::Mat normal(cv::Size(1, 3), CV_64F, cv::Scalar(0));
     plane.image2dPoints = cv::Mat(cv::Size(cameraData.width, cameraData.height),
                                   CV_8U, cv::Scalar::all(0));
     plane.image3dPoints = cv::Mat(cv::Size(cameraData.width, cameraData.height),
                                   CV_64FC3, cv::Scalar::all(0));
+    PlaneAnalysis::calculateNewNormal(plane);
+  }
+
+  // Merge similar planes
+  PlaneAnalysis::mergeSimilarPlanes(planes);
+
+  // Set image areas
+  for (Plane& plane : planes) {
     for (const Quadtree *node : plane.nodes) {
       plane.setImageArea(node->minBounds, node->maxBounds);
-      normal += node->normal;
     }
-    normal /= plane.nodes.size();
-    plane.normal = normal;
   }
 
   // For each point in the depth data, calculate distance to point
@@ -133,7 +194,7 @@ cv::Mat PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
       Plane *bestFit;
       double minDistance = MAX_POINT_PLANE_DISTANCE,
       normalDiff = MAX_POINT_PLANE_NORMAL_DIFF;
-      bool skip = false;
+      bool skip = false, isObject = true;
       for (Plane& plane : planes) {
         // If the point already exists in a plane, skip this point.
         // Despite having to loop over all nodes, this is generally
@@ -156,6 +217,8 @@ cv::Mat PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
                                  plane.normal));
 
         if (dist < MAX_POINT_PLANE_DISTANCE) {
+          isObject = false;
+
           // Calculate the difference between the plane normal and the two
           // found normals. If the largest difference is too large, ignore
           // this point
@@ -190,7 +253,7 @@ cv::Mat PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
         bestFit->setImagePoint(point2d);
         bestFit->insert3dPoint(point, mutex);
         bestFit->insert2dPoint(point2d, mutex);
-      } else if (!skip) {
+      } else if (!skip && isObject) {
         // Insert non-plane point
         cv::Point p1(point2d[1] - std::floor(POINT_DELTA / 2),
                      point2d[0] - std::floor(POINT_DELTA / 2)),
@@ -214,4 +277,14 @@ cv::Mat PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
     nonPlanePoints -= plane.image2dPoints;
   }
   return nonPlanePoints;
+}
+
+void PlaneAnalysis::removeSmallPlanes(std::vector<Plane>& planes)
+{
+  for (size_t i = 0; i < planes.size(); i++) {
+    if (planes[i].samples < MIN_PLANE_SAMPLE_SIZE) {
+      planes.erase(planes.begin() + i);
+      i--;
+    }
+  }
 }

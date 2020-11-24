@@ -17,6 +17,7 @@ HoughPlaneTransform::HoughPlaneTransform(CameraData& cameraData)
   voting(root, *accumulator, usedBins, usedKernels);
   timeVoting = msUntilNow(start) - timeQuadtree;
   peakDetection(planes, *accumulator, usedKernels, usedBins);
+  PlaneAnalysis::removeSmallPlanes(planes);
   std::sort(planes.begin(), planes.end());
   timePeak = msUntilNow(start) - timeQuadtree - timeVoting;
 }

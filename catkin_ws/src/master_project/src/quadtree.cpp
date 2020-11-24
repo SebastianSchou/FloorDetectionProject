@@ -11,6 +11,8 @@
 #define MIN_EIGENVALUE_INDEX 2
 #define MIN_SAMPLE_DENSITY 0.9 // [%]
 #define MAX_GRADIANT_SUM 60.0  // [m]
+#define ROWS_REMOVE 3
+#define COLS_REMOVE 3
 
 Quadtree::Quadtree()
 {
@@ -31,7 +33,7 @@ Quadtree::Quadtree()
   id = 0;
   idNo = 0;
   setMinSamplesInNode(25);
-  setMaxPlaneThickness(0.36);
+  setMaxPlaneThickness(0.45);
 }
 
 Quadtree::~Quadtree()
@@ -203,11 +205,18 @@ void Quadtree::initializeRoot(CameraData& cameraData)
   cameraData.data3d = cv::Mat(cv::Size(cameraData.width, cameraData.height),
                               CV_64FC3, cv::Scalar::all(0));
 
+  // Remove borders of depth data, as it is unreliable
+  int rows = cameraData.height, cols = cameraData.width;
+  cameraData.depthData.rowRange(0, ROWS_REMOVE) = 0.0;
+  cameraData.depthData.rowRange(rows - 1 - ROWS_REMOVE, rows - 1) = 0.0;
+  cameraData.depthData.colRange(0, COLS_REMOVE) = 0.0;
+  cameraData.depthData.colRange(cols - 1 - COLS_REMOVE, cols - 1) = 0.0;
+
   // Make summed-area table with x, y, z coordinates and their products
   sat = SummedAreaTable(cameraData.height, cameraData.width);
 
-  for (int r = 0; r < cameraData.height; r++) {
-    for (int c = 0; c < cameraData.width; c++) {
+  for (int r = 0; r < rows; r++) {
+    for (int c = 0; c < cols; c++) {
       // Get distance
       double z = cameraData.depthData.at<float>(r, c);
 

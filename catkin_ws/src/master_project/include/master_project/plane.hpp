@@ -7,6 +7,8 @@
 
 #define MIN_INDEPENDENT_NODE_SIZE 50
 #define POINT_DELTA 2
+#define MIN_PLANE_SAMPLE_SIZE 500
+#define MIN_NODE_NEIGHBOR_SAMPLE_SUM 100
 
 class Plane {
 public:
@@ -99,7 +101,7 @@ public:
         if (((x1 == xn1) || (x2 == xn1) || (x1 == xn2) || (x2 == xn2)) &&
             ((y1 == yn1) || (y2 == yn1) || (y1 == yn2) || (y2 == yn2))) {
           samples += nextNode->samples;
-          if (samples > 200) {
+          if (samples > MIN_NODE_NEIGHBOR_SAMPLE_SUM) {
             return true;
           }
           nextNodes.push_back(node);
