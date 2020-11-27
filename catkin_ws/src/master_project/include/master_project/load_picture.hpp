@@ -40,7 +40,6 @@ int loadPicture(int argc, char **argv, const std::string& filePath)
   auto timePlanePoints = std::chrono::steady_clock::now();
   cv::Mat nonPlanePoints = PlaneAnalysis::computePlanePoints(planes,
                                                              cameraData);
-  PlaneAnalysis::assignPlaneType(planes, 0.86);
   printf("Processing time: %.3f ms. Computing plane points: %.3f ms\n",
          msUntilNow(start), msUntilNow(timePlanePoints));
 

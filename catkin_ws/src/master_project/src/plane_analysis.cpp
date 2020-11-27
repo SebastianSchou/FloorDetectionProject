@@ -11,6 +11,8 @@
 #define MAX_FLOOR_DISTANCE 1.0                               // [m]
 #define MAX_NORMAL_Y_VALUE 0.1
 #define MAX_REPLACE_WALL_DISTANCE 0.5                        // [m]
+#define OBJECT_MAX_HEIGHT_ABOVE_FLOOR 1.5                    // [m]
+#define TYPICAL_FLOOR_HEIGHT -0.8                            // [m]
 
 bool PlaneAnalysis::isGround(const Plane& currentFloor, const Plane& plane,
                              const float cameraHeight)
@@ -207,7 +209,8 @@ void PlaneAnalysis::mergeSimilarPlanes(std::vector<Plane>& planes)
 }
 
 cv::Mat PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
-                                          const CameraData  & cameraData)
+                                          const CameraData  & cameraData,
+                                          const double        cameraHeight)
 {
   // Mutex is needed, as OpenCV's forEach function runs in parallel threads,
   // and if they try to change the same value at the same time, the script
@@ -231,10 +234,20 @@ cv::Mat PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
   // Merge similar planes
   PlaneAnalysis::mergeSimilarPlanes(planes);
 
-  // Set image areas
+  // Assign type to planes
+  PlaneAnalysis::assignPlaneType(planes, cameraHeight);
+
+  // Set image areas and find floor height
+  double maxObjectHeight = OBJECT_MAX_HEIGHT_ABOVE_FLOOR;
+  double minObjectHeight = TYPICAL_FLOOR_HEIGHT;
   for (Plane& plane : planes) {
     for (const Quadtree *node : plane.nodes) {
       plane.setImageArea(node->minBounds, node->maxBounds);
+    }
+    if (plane.type == PLANE_TYPE_FLOOR) {
+      maxObjectHeight = -plane.position.at<double>(1) +
+                        OBJECT_MAX_HEIGHT_ABOVE_FLOOR;
+      minObjectHeight = -plane.position.at<double>(1);
     }
   }
 
@@ -327,12 +340,11 @@ cv::Mat PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
         bestFit->insert3dPoint(point, mutex);
         bestFit->insert2dPoint(point2d, mutex);
       } else if (!skip && isObject) {
-        // Insert non-plane point
-        cv::Point p1(point2d[1] - std::floor(POINT_DELTA / 2),
-                     point2d[0] - std::floor(POINT_DELTA / 2)),
-        p2(point2d[1] + std::ceil(POINT_DELTA / 2),
-           point2d[0] + std::ceil(POINT_DELTA / 2));
-        cv::rectangle(nonPlanePoints, p1, p2, cv::Scalar::all(255), cv::FILLED);
+        // Check if point is relevant
+        if (maxObjectHeight > -point[1] && minObjectHeight < -point[1]) {
+          // Insert non-plane point
+          nonPlanePoints.at<uchar>(r, c) = 255;
+        }
       }
     }
   }

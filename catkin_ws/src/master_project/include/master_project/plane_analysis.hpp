@@ -23,7 +23,8 @@ bool    isSimilar(const Plane& plane1, const Plane& plane2);
 bool    hasSimilarNormal(const Plane& plane1, const Plane& plane2);
 void    transferNodes(Plane& plane1, Plane& plane2);
 cv::Mat computePlanePoints(std::vector<Plane>& planes,
-                           const CameraData  & cameraData);
+                           const CameraData  & cameraData,
+                           const double				 cameraHeight = 0.0);
 void    calculateNewNormal(Plane& plane);
 void    mergeSimilarPlanes(std::vector<Plane>& planes);
 float   leastSquareError(const Plane& plane, const Quadtree& node);
