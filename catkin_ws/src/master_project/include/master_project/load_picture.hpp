@@ -37,16 +37,14 @@ int loadPicture(int argc, char **argv, const std::string& filePath)
   // Proces planes
   HoughPlaneTransform houghPlaneTransform(cameraData);
   std::vector<Plane>  planes = houghPlaneTransform.planes;
-  Plane   floor = PlaneAnalysis::getGroundPlane(planes);
+  auto timePlanePoints = std::chrono::steady_clock::now();
   cv::Mat nonPlanePoints = PlaneAnalysis::computePlanePoints(planes,
                                                              cameraData);
+  PlaneAnalysis::assignPlaneType(planes, 0.86);
+  printf("Processing time: %.3f ms. Computing plane points: %.3f ms\n",
+         msUntilNow(start), msUntilNow(timePlanePoints));
 
-  printf("Processing time: %.3f ms\n", msUntilNow(start));
-
-
-  if (floor.rho != 0.0) {
-    DrawingFunctions::assignColorToPlane(floor, 0, 0, 255);
-  }
+  // PlaneAnalysis::printPlanesInformation(planes);
 
   // Draw
   cv::Mat onlyQuadtree = cameraData.depthAlignedColorImage.clone();

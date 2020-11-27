@@ -44,15 +44,6 @@ int main(int argc, char **argv)
 
     HoughPlaneTransform houghPlaneTransform(cameraData);
     std::vector<Plane>  planes = houghPlaneTransform.planes;
-    Plane floor = PlaneAnalysis::getGroundPlane(planes);
-
-    if (floor.rho != 0.0) {
-      DrawingFunctions::assignColorToPlane(floor, 0, 0, 255);
-    }
-
-    // houghPlaneTransform.printTimePartition();
-    // houghPlaneTransform.printPlaneInformation(floor);
-    // houghPlaneTransform.printPlanesInformation();
 
     // Calculate average itteration time
     timeSum += msUntilNow(start);

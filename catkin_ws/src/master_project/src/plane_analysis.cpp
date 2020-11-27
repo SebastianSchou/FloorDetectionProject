@@ -5,26 +5,101 @@
 #define MAX_POINT_PLANE_NORMAL_DIFF 0.3
 #define ACCEPTABLE_BEST_NORMAL_DIFF 0.1
 #define MAX_PLANE_NORMAL_DIFF 0.15
+#define MAX_INCLINE_DEGREES 8.0                              // [degrees]
+#define MAX_INCLINE_RADIANS MAX_INCLINE_DEGREES * PI / 180.0 // [radians]
+#define MIN_FLOOR_DISTANCE 0.5                               // [m]
+#define MAX_FLOOR_DISTANCE 1.0                               // [m]
+#define MAX_NORMAL_Y_VALUE 0.1
+#define MAX_REPLACE_WALL_DISTANCE 0.5                        // [m]
 
-Plane PlaneAnalysis::getGroundPlane(std::vector<Plane>& planes)
+bool PlaneAnalysis::isGround(const Plane& currentFloor, const Plane& plane,
+                             const float cameraHeight)
 {
-  int   maxInclineDegrees = 15;
-  float maxInclineRadians = (float)maxInclineDegrees * PI / 180.0;
-  Plane floor; floor.rho = 0.0;
+  // Checks if the plane is more likely to be the ground than the current
+  // floor by doing the following checks:
+  // - Distance to the plane is either closer to camera height if it is given,
+  //   else is within height limit and further away than current floor
+  // - Incline of the plane is (mostly) horizontal
+  // - Y-direction of the normal is positive (exclude ceilings)
+  if (cameraHeight == 0) {
+    return (plane.rho > MIN_FLOOR_DISTANCE) &&
+           (plane.rho < MAX_FLOOR_DISTANCE) &&
+           (currentFloor.rho < plane.rho) &&
+           (std::abs(std::abs(plane.phi) - PI / 2.0) < MAX_INCLINE_RADIANS) &&
+           (std::abs(std::abs(plane.theta) - PI / 2.0) < MAX_INCLINE_RADIANS) &&
+           (plane.normal.at<double>(1) > 0);
+  } else {
+    return (std::abs(cameraHeight - plane.rho) <
+            std::abs(cameraHeight - currentFloor.rho)) &&
+           (std::abs(std::abs(plane.phi) - PI / 2.0) < MAX_INCLINE_RADIANS) &&
+           (std::abs(std::abs(plane.theta) - PI / 2.0) < MAX_INCLINE_RADIANS) &&
+           (plane.normal.at<double>(1) > 0);
+  }
+}
 
+bool PlaneAnalysis::isWall(const Plane& plane)
+{
+  // Checks if the plane is like a wall by doing the following checks:
+  // - Has a small y-value in the normal
+  return std::abs(plane.normal.at<double>(1)) < MAX_NORMAL_Y_VALUE;
+}
+
+bool PlaneAnalysis::isBetterWall(const Plane& currentWall, const Plane& plane)
+{
+  return PlaneAnalysis::hasSimilarNormal(currentWall, plane) &&
+         currentWall.rho < plane.rho &&
+         plane.rho - currentWall.rho <= MAX_REPLACE_WALL_DISTANCE;
+}
+
+bool PlaneAnalysis::isCeiling(const Plane currentCeil, const Plane& plane)
+{
+  // Checks if the plane is more likely to be the ceiling than the current
+  // ceiling by doing the following checks:
+  // - Distance to the plane is further away than current ceiling
+  // - Incline of the plane is (mostly) horizontal
+  // - Y-direction of the normal is negative
+  return (currentCeil.rho < plane.rho) &&
+         (std::abs(std::abs(plane.phi) - PI / 2.0) < MAX_INCLINE_RADIANS) &&
+         (std::abs(std::abs(plane.theta) - PI / 2.0) < MAX_INCLINE_RADIANS) &&
+         (plane.normal.at<double>(1) < 0);
+}
+
+void PlaneAnalysis::assignPlaneType(std::vector<Plane>& planes,
+                                    const float         cameraHeight)
+{
+  std::vector<Plane *> walls;
+  Plane *floor = new Plane();
+  Plane *ceiling = new Plane();
+  floor->rho = 0.0;
+
+  // Assign floor, walls and ceiling
   for (Plane& plane : planes) {
-    // Check if incline of the plane is (mostly) horizontal, that the
-    // distance to the plane is furthest below the camera, that the
-    // y-direction of the normal is positive (exclude ceilings), and
-    // that a minimum number of samples are in the plane
-    if ((std::abs(std::abs(plane.phi) - PI / 2.0) < maxInclineRadians) &&
-        (std::abs(std::abs(plane.theta) - PI / 2.0) < maxInclineRadians) &&
-        (floor.rho < plane.rho) && (plane.samples > 500) &&
-        (plane.normal.at<double>(1) > 0)) {
-      floor = plane;
+    if (PlaneAnalysis::isGround(*floor, plane, cameraHeight)) {
+      floor->type = PLANE_TYPE_OTHER;
+      floor = &plane;
+      floor->type = PLANE_TYPE_FLOOR;
+    } else if (PlaneAnalysis::isWall(plane)) {
+      bool isExistingWall = false;
+      for (size_t i = 0; i < walls.size(); i++) {
+        if (isBetterWall(*walls[i], plane)) {
+          walls[i]->type = PLANE_TYPE_OTHER;
+          plane.type = PLANE_TYPE_WALL;
+          walls.erase(walls.begin() + i);
+          walls.push_back(&plane);
+          isExistingWall = true;
+          break;
+        }
+      }
+      if (!isExistingWall) {
+        plane.type = PLANE_TYPE_WALL;
+        walls.push_back(&plane);
+      }
+    } else if (PlaneAnalysis::isCeiling(*ceiling, plane)) {
+      ceiling->type = PLANE_TYPE_OTHER;
+      ceiling = &plane;
+      ceiling->type = PLANE_TYPE_CEILING;
     }
   }
-  return floor;
 }
 
 bool PlaneAnalysis::hasSimilarNormal(const Plane& plane1, const Plane& plane2)
@@ -89,7 +164,7 @@ void PlaneAnalysis::calculateNewNormal(Plane& plane)
     normal += node->normal;
   }
   normal /= plane.nodes.size();
-  plane.normal = normal;
+  plane.normal = normalizeVector(normal);
   plane.rho = plane.position.dot(plane.normal);
   plane.phi = std::acos(plane.normal.at<double>(2));
   plane.theta = std::atan2(plane.normal.at<double>(1),
@@ -130,8 +205,6 @@ void PlaneAnalysis::mergeSimilarPlanes(std::vector<Plane>& planes)
     }
   }
 }
-
-// void PlaneAnalysis::swapSimilarNodes(std::vector<Plane>& planes) {
 
 cv::Mat PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
                                           const CameraData  & cameraData)
@@ -299,10 +372,11 @@ void PlaneAnalysis::printPlanesInformation(const std::vector<Plane>& planes)
 
 void PlaneAnalysis::printPlaneInformation(const Plane& plane)
 {
-  printf("Plane %d:\nSamples: %d, nodes: %ld, normal: [%.3f, %.3f, %.3f], "
-         "position: [%.3f, %.3f, %.3f]\n"
+  printf("Plane %d, type '%s':\nSamples: %d, nodes: %ld, "
+         "normal: [%.3f, %.3f, %.3f], position: [%.3f, %.3f, %.3f]\n"
          "Distance to plane: %.3f, phi: %.3f, theta: %.3f\n",
-         plane.id, plane.samples, plane.nodes.size(),
+         plane.id, PLANE_TYPE_STR[plane.type].c_str(),
+         plane.samples, plane.nodes.size(),
          plane.normal.at<double>(0), plane.normal.at<double>(1),
          plane.normal.at<double>(2), plane.position.at<double>(0),
          plane.position.at<double>(1), plane.position.at<double>(2),

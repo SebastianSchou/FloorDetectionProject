@@ -10,6 +10,18 @@
 #define MIN_PLANE_SAMPLE_SIZE 500
 #define MIN_NODE_NEIGHBOR_SAMPLE_SUM 100
 
+enum PlaneType {
+  PLANE_TYPE_OTHER,
+  PLANE_TYPE_FLOOR,
+  PLANE_TYPE_WALL,
+  PLANE_TYPE_CEILING,
+  PLANE_TYPE_RAMP,
+  PLANE_TYPE_STAIR
+};
+
+const std::string PLANE_TYPE_STR[] =
+{ "Other", "Floor", "Wall", "Ceiling", "Ramp", "Stair" };
+
 class Plane {
 public:
 
@@ -23,6 +35,7 @@ public:
     mean = cv::Mat::zeros(cv::Size(1, 3), CV_64F);
     color = cv::Mat::zeros(cv::Size(1, 3), CV_8U);
     samples = 0;
+    type = PLANE_TYPE_OTHER;
   }
 
   ~Plane(void)
@@ -157,7 +170,7 @@ public:
 
   double theta, phi, rho, votes, rootRepresentativeness, rotate, thetaIndex,
          thetaAbs, phiAbs;
-  int phiIndex, rhoIndex, samples, id;
+  int phiIndex, rhoIndex, samples, id, type;
   bool isShowing;
   cv::Mat position, mean, normal, color, image2dPoints, image3dPoints;
   std::vector<std::vector<double> > validCoordinates;
