@@ -224,10 +224,10 @@ void Quadtree::initializeRoot(CameraData& cameraData)
       if ((z > MIN_DISTANCE) && (z < MAX_DISTANCE)) {
         // Calculate x and y using z and the depth cameras intrinsics
         double scaleSize = cameraData.filterVariables.decimationScaleFactor;
-        double ppx = cameraData.intrinsics.ppx / scaleSize;
-        double ppy = cameraData.intrinsics.ppy / scaleSize;
-        double fx = cameraData.intrinsics.fx / scaleSize;
-        double fy = cameraData.intrinsics.fy / scaleSize;
+        double ppx = cameraData.ppx / scaleSize;
+        double ppy = cameraData.ppy / scaleSize;
+        double fx = cameraData.fx / scaleSize;
+        double fy = cameraData.fy / scaleSize;
         double x = (c - ppx) * z / fx;
         double y = (r - ppy) * z / fy;
         cameraData.data3d.at<cv::Vec3d>(r, c) = cv::Vec3d(x, y, z);

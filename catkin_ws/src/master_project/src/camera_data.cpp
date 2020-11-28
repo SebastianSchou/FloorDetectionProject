@@ -87,9 +87,11 @@ bool CameraData::initializeCamera()
   }
 
   // Get depth frame intrinsics
-  intrinsics =
+  rs2_intrinsics intrinsics =
     profile.get_stream(RS2_STREAM_DEPTH).as<rs2::video_stream_profile>().
     get_intrinsics();
+  fx = intrinsics.fx; fy = intrinsics.fy;
+  ppx = intrinsics.ppx; ppy = intrinsics.ppy;
 
   ROS_INFO("Realsense D435 camera initialized.");
   return true;
@@ -191,6 +193,9 @@ bool CameraData::loadImage(const std::string& filename)
   depthData.convertTo(depthData, CV_32F);
   cv::medianBlur(depthData, depthData, 5);
   cv::GaussianBlur(depthData, depthData, cv::Size(5, 5), 0);
+
+  fx = USUAL_FX; fy = USUAL_FY;
+  ppx = USUAL_PPX; ppy = USUAL_PPY;
 
   try {
     normalColorImage = cv::imread(filename + "_color.png", cv::IMREAD_COLOR);

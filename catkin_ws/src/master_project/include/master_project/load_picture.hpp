@@ -20,14 +20,9 @@ int loadPicture(int argc, char **argv, const std::string& filePath)
     return EXIT_ERROR;
   }
 
-  // Init Intel RealSense camera
+  // Load image
   CameraData cameraData;
-  if (!cameraData.initializeCamera()) {
-    return EXIT_ERROR;
-  }
-
   std::string filename = filePath + picture;
-
   if (!cameraData.loadImage(filename)) {
     return EXIT_ERROR;
   }
@@ -78,7 +73,6 @@ int loadPicture(int argc, char **argv, const std::string& filePath)
   cv::waitKey(0);
 
   // Shutdown
-  cameraData.pipe.stop();
   ros::shutdown();
   return EXIT_SUCCESS;
 }

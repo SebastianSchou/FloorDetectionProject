@@ -10,6 +10,10 @@
 #define IMAGE_HEIGHT 480 // [pixel]
 #define DEPTH_WIDTH IMAGE_WIDTH / IMAGE_SCALE
 #define DEPTH_HEIGHT IMAGE_HEIGHT / IMAGE_SCALE
+#define USUAL_FY 422.772369
+#define USUAL_FX 422.772369
+#define USUAL_PPX 424.636292
+#define USUAL_PPY 239.201035
 
 struct FilterVariables {
   int decimationScaleFactor = IMAGE_SCALE,
@@ -30,7 +34,7 @@ public:
   rs2::pipeline pipe;
   rs2::pipeline_profile profile;
   int width, height;
-  rs2_intrinsics intrinsics;
+  double fx, fy, ppx, ppy;
   cv::Mat normalColorImage, colorizedDepthImage, depthAlignedColorImage,
           irImage, depthData, data3d;
   FilterVariables filterVariables;
