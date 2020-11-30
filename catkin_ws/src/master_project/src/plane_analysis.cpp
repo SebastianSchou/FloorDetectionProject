@@ -342,8 +342,27 @@ cv::Mat PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
       } else if (!skip && isObject) {
         // Check if point is relevant
         if (maxObjectHeight > -point[1] && minObjectHeight < -point[1]) {
-          // Insert non-plane point
-          nonPlanePoints.at<uchar>(r, c) = 255;
+          // Insert non-plane point. Check if it is an error by looking at
+          // the distance values around the point. If more than a quarter are
+          // much larger or outside distance limit, ignore the point
+          int errorPoints = 0;
+          for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+              if (i == 1 && j == 1) {
+                continue;
+              }
+              cv::Vec3d pointNew =
+                cameraData.data3d.at<cv::Vec3d>(r + i, c + j);
+              if (pointNew[2] > point[2] * 1.25 ||
+                  pointNew[2] < MIN_DISTANCE ||
+                  pointNew[2] > MAX_DISTANCE) {
+                errorPoints++;
+              }
+            }
+          }
+          if (errorPoints < 3) {
+            nonPlanePoints.at<uchar>(r, c) = 255;
+          }
         }
       }
     }
