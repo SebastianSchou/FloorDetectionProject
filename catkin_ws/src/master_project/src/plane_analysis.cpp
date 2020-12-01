@@ -11,8 +11,13 @@
 #define MAX_FLOOR_DISTANCE 1.0                               // [m]
 #define MAX_NORMAL_Y_VALUE 0.1
 #define MAX_REPLACE_WALL_DISTANCE 0.5                        // [m]
-#define OBJECT_MAX_HEIGHT_ABOVE_FLOOR 1.5                    // [m]
+#define MIN_ROBOT_HEIGHT 0.5                                 // [m]
+#define MAX_ROBOT_HEIGHT 1.5                                 // [m]
+#define OBJECT_MAX_HEIGHT_ABOVE_FLOOR MAX_ROBOT_HEIGHT       // [m]
 #define TYPICAL_FLOOR_HEIGHT -0.8                            // [m]
+#define MIN_PLANE_AREA 0.5                                   // [m^2]
+#define MAX_PLANE_AREA_FILL 1.0                              // [m^2]
+#define MAX_OBJECT_DISTANCE_DIFFERENCE 0.2                   // [m]
 
 bool PlaneAnalysis::isGround(const Plane& currentFloor, const Plane& plane,
                              const float cameraHeight)
@@ -208,26 +213,26 @@ void PlaneAnalysis::mergeSimilarPlanes(std::vector<Plane>& planes)
   }
 }
 
-cv::Mat PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
-                                          const CameraData  & cameraData,
-                                          const double        cameraHeight)
+Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
+                                        const CameraData  & cameraData,
+                                        const double        cameraHeight)
 {
   // Mutex is needed, as OpenCV's forEach function runs in parallel threads,
   // and if they try to change the same value at the same time, the script
   // crashes
-  std::mutex mutex;
+  std::mutex mutex, mutexObjects;
 
   // Collect all points which are not part of a plane, while still within the
   // distance limit
-  cv::Mat nonPlanePoints(cv::Size(cameraData.width, cameraData.height),
-                         CV_8U, cv::Scalar::all(0));
+  Plane nonPlanePoints;
+  nonPlanePoints.image2dPoints =
+    cv::Mat(cv::Size(cameraData.width, cameraData.height), CV_8U,
+            cv::Scalar::all(0));
 
   // Initialize planes
   for (Plane& plane : planes) {
     plane.image2dPoints = cv::Mat(cv::Size(cameraData.width, cameraData.height),
                                   CV_8U, cv::Scalar::all(0));
-    plane.image3dPoints = cv::Mat(cv::Size(cameraData.width, cameraData.height),
-                                  CV_64FC3, cv::Scalar::all(0));
     PlaneAnalysis::calculateNewNormal(plane);
   }
 
@@ -236,6 +241,8 @@ cv::Mat PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
 
   // Assign type to planes
   PlaneAnalysis::assignPlaneType(planes, cameraHeight);
+  Plane *floor = new Plane();
+  bool   hasFloor = false;
 
   // Set image areas and find floor height
   double maxObjectHeight = OBJECT_MAX_HEIGHT_ABOVE_FLOOR;
@@ -245,6 +252,8 @@ cv::Mat PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
       plane.setImageArea(node->minBounds, node->maxBounds);
     }
     if (plane.type == PLANE_TYPE_FLOOR) {
+      floor = &plane;
+      hasFloor = true;
       maxObjectHeight = -plane.position.at<double>(1) +
                         OBJECT_MAX_HEIGHT_ABOVE_FLOOR;
       minObjectHeight = -plane.position.at<double>(1);
@@ -341,27 +350,22 @@ cv::Mat PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
         bestFit->insert2dPoint(point2d, mutex);
       } else if (!skip && isObject) {
         // Check if point is relevant
-        if (maxObjectHeight > -point[1] && minObjectHeight < -point[1]) {
-          // Insert non-plane point. Check if it is an error by looking at
-          // the distance values around the point. If more than a quarter are
-          // much larger or outside distance limit, ignore the point
-          int errorPoints = 0;
-          for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-              if (i == 1 && j == 1) {
-                continue;
-              }
-              cv::Vec3d pointNew =
-                cameraData.data3d.at<cv::Vec3d>(r + i, c + j);
-              if (pointNew[2] > point[2] * 1.25 ||
-                  pointNew[2] < MIN_DISTANCE ||
-                  pointNew[2] > MAX_DISTANCE) {
-                errorPoints++;
-              }
-            }
-          }
-          if (errorPoints < 3) {
-            nonPlanePoints.at<uchar>(r, c) = 255;
+        if ((maxObjectHeight > -point[1]) && (minObjectHeight < -point[1]) &&
+            !PlaneAnalysis::isFaultyObject(cameraData.data3d, point[2], r, c)) {
+          // Insert non-plane point
+          nonPlanePoints.image2dPoints.at<uchar>(r, c) = 255;
+          nonPlanePoints.insert3dPoint(point, mutexObjects);
+          PlaneAnalysis::convert2dTo3d(point, nonPlanePoints, false);
+          if (-point[1] < minObjectHeight + MIN_ROBOT_HEIGHT) {
+            const cv::Vec2i coord =
+              PlaneAnalysis::getTopViewCoordinates(point);
+            int margin = 4;
+            cv::Point p1(coord[0] - margin, coord[1] - margin);
+            cv::Point p2(coord[0] + margin, coord[1] - margin);
+            cv::Point p3(coord[0] - margin, coord[1] + margin);
+            cv::Point p4(coord[0] + margin, coord[1] + margin);
+            std::vector<cv::Point> area {p1, p2, p3, p4 };
+            nonPlanePoints.insertRestrictedArea(area, mutexObjects);
           }
         }
       }
@@ -378,9 +382,168 @@ cv::Mat PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
                      cv::MORPH_OPEN, stucturingElement);
     cv::morphologyEx(plane.image2dPoints, plane.image2dPoints,
                      cv::MORPH_CLOSE, stucturingElement);
-    nonPlanePoints -= plane.image2dPoints;
+    nonPlanePoints.image2dPoints -= plane.image2dPoints;
   }
+
+  // Draw planes in x-z coordinate
+  cameraData.data3d.forEach<cv::Vec3d>(
+    [&](cv::Vec3d& p, const int *position) {
+    const int r = position[0], c = position[1];
+    if ((p[2] <= MIN_DISTANCE) || (p[2] >= MAX_DISTANCE)) {
+      return;
+    }
+    for (Plane& plane : planes) {
+      if (plane.type == PLANE_TYPE_CEILING) {
+        continue;
+      }
+      if (plane.image2dPoints.at<uchar>(r, c) > 0) {
+        PlaneAnalysis::convert2dTo3d(p, plane, true);
+      }
+    }
+  }
+    );
+
+  // As 3d points can be sporadic, use a 'close' morphology with
+  // a large structuring element to connect points
+  stucturingElement = cv::getStructuringElement(cv::MORPH_RECT,
+                                                cv::Size(11, 11));
+  for (Plane& plane : planes) {
+    if (plane.type == PLANE_TYPE_CEILING) {
+      continue;
+    }
+    if (plane.type != PLANE_TYPE_FLOOR) {
+      floor->topView -= plane.topView;
+    }
+    cv::morphologyEx(plane.topView, plane.topView,
+                     cv::MORPH_CLOSE, stucturingElement);
+  }
+
+  // Remove spots with objects close to floor level
+  cv::Mat objectAreas(
+    cv::Size(nonPlanePoints.topView.cols, nonPlanePoints.topView.rows),
+    CV_8U, cv::Scalar::all(0));
+  if (nonPlanePoints.restrictedAreas.size() > 0) {
+    for (size_t i = 0; i < nonPlanePoints.restrictedAreas.size(); i++) {
+      cv::drawContours(objectAreas, nonPlanePoints.restrictedAreas,
+                       i, 255, cv::FILLED);
+    }
+  }
+  floor->topView -= objectAreas;
+
   return nonPlanePoints;
+}
+
+bool PlaneAnalysis::isFaultyObject(const cv::Mat& m, const double dist,
+                                   const int r, const int c)
+{
+  // Check if it is an error by looking at the distance values around the
+  // point. If more than a quarter are much larger or outside distance limit,
+  // ignore the point
+  int errorPoints = 0;
+
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      if ((i == 1) && (j == 1)) {
+        continue;
+      }
+      cv::Vec3d pointNew = m.at<cv::Vec3d>(r + i, c + j);
+      if ((std::abs(pointNew[2] - dist) > MAX_OBJECT_DISTANCE_DIFFERENCE) ||
+          (pointNew[2] < MIN_DISTANCE) || (pointNew[2] > MAX_DISTANCE)) {
+        errorPoints++;
+        if (errorPoints >= 3) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+cv::Vec2i PlaneAnalysis::getTopViewCoordinates(const cv::Vec3d& p)
+{
+  int col = std::round(p[0] / TOP_VIEW_DELTA) +
+            (MAX_DISTANCE / 2.0) / TOP_VIEW_DELTA;
+  int row = TOP_VIEW_HEIGHT - std::round(p[2] / TOP_VIEW_DELTA);
+
+  return cv::Vec2i(col, row);
+}
+
+void PlaneAnalysis::convert2dTo3d(const cv::Vec3d& p, Plane& plane,
+                                  const bool addMargin)
+{
+  const cv::Vec2i coord = PlaneAnalysis::getTopViewCoordinates(p);
+  int margin = (addMargin) ? 2 : 0;
+
+  cv::Point p1(coord[0] - margin, coord[1] - margin);
+  cv::Point p2(coord[0] + margin, coord[1] + margin);
+  cv::rectangle(plane.topView, p1, p2, cv::Scalar(255), cv::FILLED);
+}
+
+void PlaneAnalysis::computePlaneContour(std::vector<Plane>& planes,
+                                        Plane             & nonPlanePoints)
+{
+  for (Plane& plane : planes) {
+    if ((plane.type != PLANE_TYPE_FLOOR) &&
+        (plane.type != PLANE_TYPE_OTHER)) {
+      continue;
+    }
+
+    // Find contours
+    std::vector<std::vector<cv::Point> > contours;
+    cv::findContours(plane.topView, contours, cv::RETR_TREE,
+                     cv::CHAIN_APPROX_TC89_KCOS);
+
+    // Assign contours
+    for (size_t i = 0; i < contours.size(); i++) {
+      const std::vector<cv::Point> contour = contours[i];
+
+      // Get area
+      float area = cv::contourArea(contour) * square(TOP_VIEW_DELTA);
+
+      // Check if the contour is hollow. This is done by check the mean value
+      // of pixel area within the contour. If close to zero, it is hollow
+      cv::Mat contourImage(cv::Size(plane.topView.cols, plane.topView.rows),
+                           CV_8U, cv::Scalar::all(0));
+      cv::drawContours(contourImage, contours, i, 255, cv::FILLED);
+      bool isHollow = cv::mean(plane.topView, contourImage)[0] < 125.0;
+
+      // Get center
+      auto m = cv::moments(contour);
+      int  cx = int(m.m10 / m.m00);
+      int  cy = int(m.m01 / m.m00);
+
+      // Fill counter if hollow and below max area size. If not hollow
+      // and below min area size, discard it. Else, add as traversable
+      // or restricted area
+      bool isObjectRestrictedArea = false;
+      for (const cv::Vec3d& p : nonPlanePoints.points3d) {
+        cv::Point2f areaCenter(PlaneAnalysis::getTopViewCoordinates(p));
+        isObjectRestrictedArea =
+          cv::pointPolygonTest(contour, areaCenter, false) > 0;
+        break;
+      }
+
+      if (isHollow && (area < MAX_PLANE_AREA_FILL) && !isObjectRestrictedArea) {
+        cv::floodFill(plane.topView, cv::Point(cx, cy), cv::Scalar(255));
+        contours.erase(contours.begin() + i);
+        i--;
+      } else if ((area < MIN_PLANE_AREA) && !isObjectRestrictedArea) {
+        contours.erase(contours.begin() + i);
+        i--;
+      } else {
+        // Simplify area
+        std::vector<cv::Point> approx;
+        double epsilon = 0.005 * cv::arcLength(contour, true);
+        cv::approxPolyDP(contour, approx, epsilon, true);
+        if (isHollow) {
+          plane.restrictedAreas.push_back(approx);
+        } else {
+          plane.area += area;
+          plane.traversableAreas.push_back(approx);
+        }
+      }
+    }
+  }
 }
 
 void PlaneAnalysis::removeSmallPlanes(std::vector<Plane>& planes)

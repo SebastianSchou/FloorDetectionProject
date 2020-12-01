@@ -33,8 +33,9 @@ int loadPicture(int argc, char **argv, const std::string& filePath)
   HoughPlaneTransform houghPlaneTransform(cameraData);
   std::vector<Plane>  planes = houghPlaneTransform.planes;
   auto timePlanePoints = std::chrono::steady_clock::now();
-  cv::Mat nonPlanePoints = PlaneAnalysis::computePlanePoints(planes,
-                                                             cameraData);
+  Plane nonPlanePoints = PlaneAnalysis::computePlanePoints(planes,
+                                                           cameraData);
+  PlaneAnalysis::computePlaneContour(planes, nonPlanePoints);
   printf("Processing time: %.3f ms. Computing plane points: %.3f ms\n",
          msUntilNow(start), msUntilNow(timePlanePoints));
 
@@ -59,13 +60,16 @@ int loadPicture(int argc, char **argv, const std::string& filePath)
   DrawingFunctions::drawPlanePoints(cameraData.depthAlignedColorImage,
                                     planes,
                                     cameraData);
+  cv::Mat topView =
+    DrawingFunctions::drawTopView(cameraData, planes, nonPlanePoints.topView);
 
   // cv::Mat accumDrawing = DrawingFunctions::drawAccumulatorCellVotes(
   //  width, height, *houghPlaneTransform.accumulator);
 
   // Show data
   // cv::imshow("Accumulator", accumDrawing);
-  cv::imshow("Realsense non plane points", nonPlanePoints);
+  cv::imshow("Top view", topView);
+  cv::imshow("Realsense non plane points", nonPlanePoints.image2dPoints);
   cv::imshow("Realsense plane points cleaned", cleanedPlanePoints);
   cv::imshow("Realsense plane quadtree", onlyQuadtree);
   cv::imshow("Realsense plane points rough", cameraData.depthAlignedColorImage);

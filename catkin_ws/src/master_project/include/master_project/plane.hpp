@@ -9,6 +9,9 @@
 #define POINT_DELTA 2
 #define MIN_PLANE_SAMPLE_SIZE 500
 #define MIN_NODE_NEIGHBOR_SAMPLE_SUM 100
+#define TOP_VIEW_DELTA 0.03                                      // [m]
+#define TOP_VIEW_HEIGHT std::ceil(MAX_DISTANCE / TOP_VIEW_DELTA) // [pixels]
+#define TOP_VIEW_WIDTH std::ceil(MAX_DISTANCE / TOP_VIEW_DELTA)  // [pixels]
 
 enum PlaneType {
   PLANE_TYPE_OTHER,
@@ -36,6 +39,9 @@ public:
     color = cv::Mat::zeros(cv::Size(1, 3), CV_8U);
     samples = 0;
     type = PLANE_TYPE_OTHER;
+    topView = cv::Mat(cv::Size(TOP_VIEW_WIDTH, TOP_VIEW_HEIGHT), CV_8U,
+                      cv::Scalar::all(0));
+    area = 0.0;
   }
 
   ~Plane(void)
@@ -154,6 +160,13 @@ public:
     points2d.push_back(point);
   }
 
+  void insertRestrictedArea(const std::vector<cv::Point> area,
+                            std::mutex                 & mutex)
+  {
+    std::lock_guard<std::mutex> lock(mutex);
+    restrictedAreas.push_back(area);
+  }
+
   void setImagePoint(const cv::Vec2i& point)
   {
     cv::Point p1(point[1] - std::floor(POINT_DELTA / 2),
@@ -169,10 +182,12 @@ public:
   }
 
   double theta, phi, rho, votes, rootRepresentativeness, rotate, thetaIndex,
-         thetaAbs, phiAbs;
+         thetaAbs, phiAbs, area;
   int phiIndex, rhoIndex, samples, id, type;
   bool isShowing;
-  cv::Mat position, mean, normal, color, image2dPoints, image3dPoints;
+  cv::Mat position, mean, normal, color, image2dPoints, topView;
+  std::vector<std::vector<cv::Point> > traversableAreas, restrictedAreas;
+  std::vector<std::pair<double, std::vector<cv::Point> > > heightLimitedAreas;
   std::vector<std::vector<double> > validCoordinates;
   std::vector<std::vector<int> > validPixels;
   std::vector<Quadtree *> nodes;

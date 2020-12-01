@@ -236,11 +236,46 @@ void DrawingFunctions::drawPlanes(cv::Mat                 & image,
   }
   im = cv::Mat::zeros(planes[0].image2dPoints.size(), CV_8UC3);
   for (const Plane& plane : planes) {
-    uchar r = plane.color.at<uchar>(0),
-                    g = plane.color.at<uchar>(1),
-                    b = plane.color.at<uchar>(2);
-    im.setTo(cv::Scalar(r, g, b), plane.image2dPoints);
+    cv::Scalar color = getPlaneColors(plane);
+    im.setTo(color, plane.image2dPoints);
   }
   cv::resize(im, im, im.size() * 4);
   cv::addWeighted(image, 1.0, im, 0.8, 0.0, image);
+}
+
+cv::Scalar DrawingFunctions::getPlaneColors(const Plane& plane)
+{
+  uchar r = plane.color.at<uchar>(0);
+  uchar g = plane.color.at<uchar>(1);
+  uchar b = plane.color.at<uchar>(2);
+
+  return cv::Scalar(r, g, b);
+}
+
+cv::Mat DrawingFunctions::drawTopView(const CameraData        & cameraData,
+                                      const std::vector<Plane>& planes,
+                                      const cv::Mat           & nonPlanePoints)
+{
+  cv::Mat im(cv::Size(TOP_VIEW_WIDTH, TOP_VIEW_HEIGHT), CV_8UC3,
+             cv::Scalar::all(0));
+
+  for (const Plane& plane : planes) {
+    if (plane.type == PLANE_TYPE_CEILING) {
+      continue;
+    }
+    cv::Scalar color = getPlaneColors(plane);
+    if (((plane.type == PLANE_TYPE_FLOOR) ||
+         (plane.type == PLANE_TYPE_OTHER)) &&
+        (plane.traversableAreas.size() != 0)) {
+      cv::drawContours(im, plane.traversableAreas, -1, color, cv::FILLED);
+      if (plane.restrictedAreas.size() != 0) {
+        cv::drawContours(im, plane.restrictedAreas, -1, cv::Scalar::all(0),
+                         cv::FILLED);
+      }
+    } else {
+      im.setTo(color, plane.topView);
+    }
+  }
+  im.setTo(cv::Scalar::all(255), nonPlanePoints);
+  return im;
 }
