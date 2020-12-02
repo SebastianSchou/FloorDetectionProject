@@ -5,19 +5,22 @@
 #define MAX_POINT_PLANE_NORMAL_DIFF 0.3
 #define ACCEPTABLE_BEST_NORMAL_DIFF 0.1
 #define MAX_PLANE_NORMAL_DIFF 0.15
-#define MAX_INCLINE_DEGREES 8.0                              // [degrees]
-#define MAX_INCLINE_RADIANS MAX_INCLINE_DEGREES * PI / 180.0 // [radians]
-#define MIN_FLOOR_DISTANCE 0.5                               // [m]
-#define MAX_FLOOR_DISTANCE 1.0                               // [m]
+#define MAX_INCLINE_DEGREES 8.0                                 // [degrees]
+#define MAX_INCLINE_RADIANS MAX_INCLINE_DEGREES * CV_PI / 180.0 // [radians]
+#define MIN_FLOOR_DISTANCE 0.5                                  // [m]
+#define MAX_FLOOR_DISTANCE 1.0                                  // [m]
 #define MAX_NORMAL_Y_VALUE 0.1
-#define MAX_REPLACE_WALL_DISTANCE 0.5                        // [m]
-#define MIN_ROBOT_HEIGHT 0.5                                 // [m]
-#define MAX_ROBOT_HEIGHT 1.5                                 // [m]
-#define OBJECT_MAX_HEIGHT_ABOVE_FLOOR MAX_ROBOT_HEIGHT       // [m]
-#define TYPICAL_FLOOR_HEIGHT -0.8                            // [m]
-#define MIN_PLANE_AREA 0.5                                   // [m^2]
-#define MAX_PLANE_AREA_FILL 1.0                              // [m^2]
-#define MAX_OBJECT_DISTANCE_DIFFERENCE 0.2                   // [m]
+#define MAX_REPLACE_WALL_DISTANCE 0.5                           // [m]
+#define MIN_ROBOT_HEIGHT 0.5                                    // [m]
+#define MAX_ROBOT_HEIGHT 1.5                                    // [m]
+#define OBJECT_MAX_HEIGHT_ABOVE_FLOOR MAX_ROBOT_HEIGHT          // [m]
+#define TYPICAL_FLOOR_HEIGHT -0.8                               // [m]
+#define MIN_PLANE_AREA 0.5                                      // [m^2]
+#define MAX_PLANE_AREA_FILL 1.0                                 // [m^2]
+#define MAX_OBJECT_DISTANCE_DIFFERENCE 0.2                      // [m]
+#define X 0
+#define Y 1
+#define Z 2
 
 bool PlaneAnalysis::isGround(const Plane& currentFloor, const Plane& plane,
                              const float cameraHeight)
@@ -32,15 +35,15 @@ bool PlaneAnalysis::isGround(const Plane& currentFloor, const Plane& plane,
     return (plane.rho > MIN_FLOOR_DISTANCE) &&
            (plane.rho < MAX_FLOOR_DISTANCE) &&
            (currentFloor.rho < plane.rho) &&
-           (std::abs(std::abs(plane.phi) - PI / 2.0) < MAX_INCLINE_RADIANS) &&
-           (std::abs(std::abs(plane.theta) - PI / 2.0) < MAX_INCLINE_RADIANS) &&
-           (plane.normal.at<double>(1) > 0);
+           (std::abs(std::abs(plane.phi) - CV_PI / 2.0) < MAX_INCLINE_RADIANS) &&
+           (std::abs(std::abs(plane.theta) - CV_PI / 2.0) < MAX_INCLINE_RADIANS) &&
+           (plane.normal[Y] > 0);
   } else {
     return (std::abs(cameraHeight - plane.rho) <
             std::abs(cameraHeight - currentFloor.rho)) &&
-           (std::abs(std::abs(plane.phi) - PI / 2.0) < MAX_INCLINE_RADIANS) &&
-           (std::abs(std::abs(plane.theta) - PI / 2.0) < MAX_INCLINE_RADIANS) &&
-           (plane.normal.at<double>(1) > 0);
+           (std::abs(std::abs(plane.phi) - CV_PI / 2.0) < MAX_INCLINE_RADIANS) &&
+           (std::abs(std::abs(plane.theta) - CV_PI / 2.0) < MAX_INCLINE_RADIANS) &&
+           (plane.normal[Y] > 0);
   }
 }
 
@@ -48,7 +51,7 @@ bool PlaneAnalysis::isWall(const Plane& plane)
 {
   // Checks if the plane is like a wall by doing the following checks:
   // - Has a small y-value in the normal
-  return std::abs(plane.normal.at<double>(1)) < MAX_NORMAL_Y_VALUE;
+  return std::abs(plane.normal[Y]) < MAX_NORMAL_Y_VALUE;
 }
 
 bool PlaneAnalysis::isBetterWall(const Plane& currentWall, const Plane& plane)
@@ -58,7 +61,7 @@ bool PlaneAnalysis::isBetterWall(const Plane& currentWall, const Plane& plane)
          plane.rho - currentWall.rho <= MAX_REPLACE_WALL_DISTANCE;
 }
 
-bool PlaneAnalysis::isCeiling(const Plane currentCeil, const Plane& plane)
+bool PlaneAnalysis::isCeiling(const Plane& currentCeil, const Plane& plane)
 {
   // Checks if the plane is more likely to be the ceiling than the current
   // ceiling by doing the following checks:
@@ -66,9 +69,9 @@ bool PlaneAnalysis::isCeiling(const Plane currentCeil, const Plane& plane)
   // - Incline of the plane is (mostly) horizontal
   // - Y-direction of the normal is negative
   return (currentCeil.rho < plane.rho) &&
-         (std::abs(std::abs(plane.phi) - PI / 2.0) < MAX_INCLINE_RADIANS) &&
-         (std::abs(std::abs(plane.theta) - PI / 2.0) < MAX_INCLINE_RADIANS) &&
-         (plane.normal.at<double>(1) < 0);
+         (std::abs(std::abs(plane.phi) - CV_PI / 2.0) < MAX_INCLINE_RADIANS) &&
+         (std::abs(std::abs(plane.theta) - CV_PI / 2.0) < MAX_INCLINE_RADIANS) &&
+         (plane.normal[Y] < 0);
 }
 
 void PlaneAnalysis::assignPlaneType(std::vector<Plane>& planes,
@@ -111,13 +114,7 @@ void PlaneAnalysis::assignPlaneType(std::vector<Plane>& planes,
 
 bool PlaneAnalysis::hasSimilarNormal(const Plane& plane1, const Plane& plane2)
 {
-  return squareNorm(plane1.normal - plane2.normal) < MAX_PLANE_NORMAL_DIFF;
-}
-
-bool PlaneAnalysis::hasSimilarAngle(const Plane& plane1, const Plane& plane2)
-{
-  return std::abs(plane1.phiAbs - plane2.phiAbs) < MAX_ANGLE_DIFFERENCE &&
-         std::abs(plane1.thetaAbs - plane2.thetaAbs) < MAX_ANGLE_DIFFERENCE;
+  return cv::norm(plane1.normal - plane2.normal, cv::NORM_L2) < MAX_PLANE_NORMAL_DIFF;
 }
 
 double PlaneAnalysis::getAngleDifference(const Plane& plane1,
@@ -138,11 +135,6 @@ double PlaneAnalysis::getDistanceDifference(const Plane& plane1,
   return std::abs(plane1.rho - plane2.rho);
 }
 
-bool PlaneAnalysis::isSimilar(const Plane& plane1, const Plane& plane2)
-{
-  return hasSimilarDistance(plane1, plane2) && hasSimilarAngle(plane1, plane2);
-}
-
 void PlaneAnalysis::transferNodes(Plane& plane1, Plane& plane2)
 {
   for (size_t i = 0; i < plane2.nodes.size(); i++) {
@@ -156,7 +148,7 @@ void PlaneAnalysis::transferNodes(Plane& plane1, Plane& plane2)
       continue;
     } else {
       plane1.rootRepresentativeness += node->rootRepresentativeness;
-      plane1.mean += node->mean / plane1.nodes.size();
+      plane1.mean += node->mean.mul(1 / plane1.nodes.size());
       plane1.samples += node->samples;
     }
   }
@@ -166,16 +158,17 @@ void PlaneAnalysis::transferNodes(Plane& plane1, Plane& plane2)
 
 void PlaneAnalysis::calculateNewNormal(Plane& plane)
 {
-  cv::Mat normal(cv::Size(1, 3), CV_64F, cv::Scalar(0));
+  cv::Vec3d normal(0.0, 0.0, 0.0);
+  double rho = 0.0;
   for (const Quadtree *node : plane.nodes) {
     normal += node->normal;
+    rho += node->rho;
   }
-  normal /= plane.nodes.size();
-  plane.normal = normalizeVector(normal);
-  plane.rho = plane.position.dot(plane.normal);
-  plane.phi = std::acos(plane.normal.at<double>(2));
-  plane.theta = std::atan2(plane.normal.at<double>(1),
-                           plane.normal.at<double>(0));
+  plane.normal = cv::normalize(normal / (float)plane.nodes.size());
+  plane.rho = rho / (float)plane.nodes.size();
+  plane.position = plane.normal * plane.rho;
+  plane.phi = std::acos(plane.normal[Z]);
+  plane.theta = std::atan2(plane.normal[Y], plane.normal[X]);
 }
 
 float PlaneAnalysis::leastSquareError(const Plane& plane, const Quadtree& node)
@@ -254,9 +247,9 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
     if (plane.type == PLANE_TYPE_FLOOR) {
       floor = &plane;
       hasFloor = true;
-      maxObjectHeight = -plane.position.at<double>(1) +
+      maxObjectHeight = -plane.position[Y] +
                         OBJECT_MAX_HEIGHT_ABOVE_FLOOR;
-      minObjectHeight = -plane.position.at<double>(1);
+      minObjectHeight = -plane.position[Y];
     }
   }
 
@@ -274,16 +267,16 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
     }
 
     // Only look at pixels within the distance limit
-    if ((point[2] > MIN_DISTANCE) && (point[2] < MAX_DISTANCE)) {
+    if ((point[Z] > MIN_DISTANCE) && (point[Z] < MAX_DISTANCE)) {
       // Find plane normals for nearby pixels
       pointS = cameraData.data3d.at<cv::Vec3d>(r + POINT_DELTA - 1, c);
       pointE = cameraData.data3d.at<cv::Vec3d>(r, c + POINT_DELTA - 1);
       pointN = cameraData.data3d.at<cv::Vec3d>(r - POINT_DELTA + 1, c);
       pointW = cameraData.data3d.at<cv::Vec3d>(r, c - POINT_DELTA + 1);
-      cv::Mat vecS = cv::Mat(pointS - point), vecE = cv::Mat(pointE - point);
-      cv::Mat vecN = cv::Mat(pointN - point), vecW = cv::Mat(pointW - point);
-      cv::Mat normalSE = normalizeVector(vecS.cross(vecE));
-      cv::Mat normalNW = normalizeVector(vecN.cross(vecW));
+      cv::Vec3d vecS = pointS - point, vecE = pointE - point;
+      cv::Vec3d vecN = pointN - point, vecW = pointW - point;
+      cv::Vec3d normalSE = cv::normalize(vecS.cross(vecE));
+      cv::Vec3d normalNW = cv::normalize(vecN.cross(vecW));
 
       // Loop over planes and find the plane which fits best
       Plane *bestFit;
@@ -308,7 +301,7 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
         // Calculate distance from plane to point. If this is below max
         // distance and the previous best plane fit, change the point to
         // the current plane
-        double dist = std::abs((plane.position - cv::Mat(point)).dot(
+        double dist = std::abs((plane.position - point).dot(
                                  plane.normal));
 
         if (dist < MAX_POINT_PLANE_DISTANCE) {
@@ -323,10 +316,10 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
           if (point.dot(normalNW) < 0) {
             normalNW *= -1;
           }
-          cv::Mat diffNormalSE = cv::abs(plane.normal - normalSE);
-          cv::Mat diffNormalNW = cv::abs(plane.normal - normalNW);
-          double diff = std::max(squareNorm(diffNormalSE),
-                                 squareNorm(diffNormalNW));
+          cv::Vec3d diffNormalSE = plane.normal - normalSE;
+          cv::Vec3d diffNormalNW = plane.normal - normalNW;
+          double diff = std::max(cv::norm(diffNormalSE, cv::NORM_L2),
+                                 cv::norm(diffNormalNW, cv::NORM_L2));
           if (diff < normalDiff) {
             minDistance = dist;
             normalDiff = diff;
@@ -350,13 +343,13 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
         bestFit->insert2dPoint(point2d, mutex);
       } else if (!skip && isObject) {
         // Check if point is relevant
-        if ((maxObjectHeight > -point[1]) && (minObjectHeight < -point[1]) &&
-            !PlaneAnalysis::isFaultyObject(cameraData.data3d, point[2], r, c)) {
+        if ((maxObjectHeight > -point[Y]) && (minObjectHeight < -point[Y]) &&
+            !PlaneAnalysis::isFaultyObject(cameraData.data3d, point[Z], r, c)) {
           // Insert non-plane point
           nonPlanePoints.image2dPoints.at<uchar>(r, c) = 255;
           nonPlanePoints.insert3dPoint(point, mutexObjects);
           PlaneAnalysis::convert2dTo3d(point, nonPlanePoints, false);
-          if (-point[1] < minObjectHeight + MIN_ROBOT_HEIGHT) {
+          if (-point[Y] < minObjectHeight + MIN_ROBOT_HEIGHT) {
             const cv::Vec2i coord =
               PlaneAnalysis::getTopViewCoordinates(point);
             int margin = 4;
@@ -389,7 +382,7 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
   cameraData.data3d.forEach<cv::Vec3d>(
     [&](cv::Vec3d& p, const int *position) {
     const int r = position[0], c = position[1];
-    if ((p[2] <= MIN_DISTANCE) || (p[2] >= MAX_DISTANCE)) {
+    if ((p[Z] <= MIN_DISTANCE) || (p[Z] >= MAX_DISTANCE)) {
       return;
     }
     for (Plane& plane : planes) {
@@ -419,9 +412,7 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
   }
 
   // Remove spots with objects close to floor level
-  cv::Mat objectAreas(
-    cv::Size(nonPlanePoints.topView.cols, nonPlanePoints.topView.rows),
-    CV_8U, cv::Scalar::all(0));
+  cv::Mat objectAreas(nonPlanePoints.topView.size(), CV_8U, cv::Scalar::all(0));
   if (nonPlanePoints.restrictedAreas.size() > 0) {
     for (size_t i = 0; i < nonPlanePoints.restrictedAreas.size(); i++) {
       cv::drawContours(objectAreas, nonPlanePoints.restrictedAreas,
@@ -447,8 +438,8 @@ bool PlaneAnalysis::isFaultyObject(const cv::Mat& m, const double dist,
         continue;
       }
       cv::Vec3d pointNew = m.at<cv::Vec3d>(r + i, c + j);
-      if ((std::abs(pointNew[2] - dist) > MAX_OBJECT_DISTANCE_DIFFERENCE) ||
-          (pointNew[2] < MIN_DISTANCE) || (pointNew[2] > MAX_DISTANCE)) {
+      if ((std::abs(pointNew[Z] - dist) > MAX_OBJECT_DISTANCE_DIFFERENCE) ||
+          (pointNew[Z] < MIN_DISTANCE) || (pointNew[Z] > MAX_DISTANCE)) {
         errorPoints++;
         if (errorPoints >= 3) {
           return true;
@@ -463,7 +454,7 @@ cv::Vec2i PlaneAnalysis::getTopViewCoordinates(const cv::Vec3d& p)
 {
   int col = std::round(p[0] / TOP_VIEW_DELTA) +
             (MAX_DISTANCE / 2.0) / TOP_VIEW_DELTA;
-  int row = TOP_VIEW_HEIGHT - std::round(p[2] / TOP_VIEW_DELTA);
+  int row = TOP_VIEW_HEIGHT - std::round(p[Z] / TOP_VIEW_DELTA);
 
   return cv::Vec2i(col, row);
 }
@@ -502,8 +493,7 @@ void PlaneAnalysis::computePlaneContour(std::vector<Plane>& planes,
 
       // Check if the contour is hollow. This is done by check the mean value
       // of pixel area within the contour. If close to zero, it is hollow
-      cv::Mat contourImage(cv::Size(plane.topView.cols, plane.topView.rows),
-                           CV_8U, cv::Scalar::all(0));
+      cv::Mat contourImage(plane.topView.size(), CV_8U, cv::Scalar::all(0));
       cv::drawContours(contourImage, contours, i, 255, cv::FILLED);
       bool isHollow = cv::mean(plane.topView, contourImage)[0] < 125.0;
 
@@ -571,9 +561,9 @@ void PlaneAnalysis::printPlaneInformation(const Plane& plane)
          "Distance to plane: %.3f, phi: %.3f, theta: %.3f\n",
          plane.id, PLANE_TYPE_STR[plane.type].c_str(),
          plane.samples, plane.nodes.size(),
-         plane.normal.at<double>(0), plane.normal.at<double>(1),
-         plane.normal.at<double>(2), plane.position.at<double>(0),
-         plane.position.at<double>(1), plane.position.at<double>(2),
+         plane.normal[X], plane.normal[Y],
+         plane.normal[Z], plane.position[X],
+         plane.position[Y], plane.position[Z],
          plane.rho, plane.phi, plane.theta);
   for (const Quadtree *node : plane.nodes) {
     printf("  Node %d at (%d, %d) to (%d, %d) with %d samples:\n",
@@ -584,12 +574,8 @@ void PlaneAnalysis::printPlaneInformation(const Plane& plane)
            node->samples);
     printf("    Normal: [%.3f, %.3f, %.3f], mean: [%.3f, %.3f, %.3f],"
            " node distance: %.3f\n",
-           node->normal.at<double>(0),
-           node->normal.at<double>(1),
-           node->normal.at<double>(2),
-           node->mean.at<double>(0),
-           node->mean.at<double>(1),
-           node->mean.at<double>(2),
+           node->normal[X], node->normal[Y], node->normal[Z],
+           node->mean[X], node->mean[Y], node->mean[Z],
            node->mean.dot(node->normal));
   }
 }

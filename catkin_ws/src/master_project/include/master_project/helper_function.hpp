@@ -4,9 +4,8 @@
 #include <chrono>
 #include <opencv4/opencv2/opencv.hpp>
 
-const double PI = acos(-1);
-const double PI2 = 2.0 * PI;
-static const double SQRTOFCUBIC2PI = 2.0 * sqrt(2.0) * pow(PI, 1.5);
+const double PI2 = 2.0 * CV_PI;
+static const double SQRTOFCUBIC2PI = 2.0 * sqrt(2.0) * pow(CV_PI, 1.5);
 
 float   msUntilNow(const std::chrono::steady_clock::time_point& start);
 cv::Mat normalizeVector(const cv::Mat& v);

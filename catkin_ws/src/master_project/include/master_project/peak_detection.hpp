@@ -5,8 +5,8 @@
 
 inline void peakDetection(std::vector<Plane> & planes,
                           Accumulator        & accum,
-                          std::vector<Kernel>& usedKernels,
-                          std::vector<Bin>   & usedBins)
+                          std::vector<Bin>   & usedBins,
+                          const std::vector<Kernel>& usedKernels)
 {
   // Smooth out votes with a lowpass filter
   for (Bin& bin : usedBins) {
@@ -46,8 +46,8 @@ inline void peakDetection(std::vector<Plane> & planes,
                                          currentCell->phiIndex,
                                          currentCell->rhoIndex,
                                          27);
-      std::move(currentCell->votedNotes.begin(),
-                currentCell->votedNotes.end(),
+      std::move(currentCell->votedNodes.begin(),
+                currentCell->votedNodes.end(),
                 std::inserter(nodes, nodes.end()));
       for (AccumulatorCell *neighbor : neighbors) {
         if (neighbor->votes > nextCellVotes) {
@@ -57,7 +57,7 @@ inline void peakDetection(std::vector<Plane> & planes,
       }
     } while (nextCellVotes > currentCellVotes);
     std::move(nodes.begin(), nodes.end(),
-              std::inserter(nextCell->votedNotes, nextCell->votedNotes.end()));
+              std::inserter(nextCell->votedNodes, nextCell->votedNodes.end()));
     peakCells.insert(nextCell);
     nodes.clear();
     neighbors.clear();
@@ -72,21 +72,12 @@ inline void peakDetection(std::vector<Plane> & planes,
                     cell->phiIndex, cell->rhoIndex);
 
     // Get normal vector and plane position
-    plane.normal.at<double>(0) = std::sin(plane.phi) * std::cos(plane.theta);
-    plane.normal.at<double>(1) = std::sin(plane.phi) * std::sin(plane.theta);
-    plane.normal.at<double>(2) = std::cos(plane.phi);
+    plane.normal[0] = std::sin(plane.phi) * std::cos(plane.theta);
+    plane.normal[1] = std::sin(plane.phi) * std::sin(plane.theta);
+    plane.normal[2] = std::cos(plane.phi);
     plane.position = plane.normal * plane.rho;
 
-    // Calculate phi and theta for absolute values of the normal vector
-    plane.thetaAbs = (std::abs(plane.theta) < MAX_ANGLE_DIFFERENCE) ?
-                     std::atan2(std::abs(plane.normal.at<double>(1)),
-                                std::abs(plane.normal.at<double>(0))) :
-                     plane.theta;
-    plane.phiAbs = (std::abs(plane.phi) < MAX_ANGLE_DIFFERENCE) ?
-                   std::acos(std::abs(plane.normal.at<double>(2))) :
-                   plane.phi;
-
-    std::move(cell->votedNotes.begin(), cell->votedNotes.end(),
+    std::move(cell->votedNodes.begin(), cell->votedNodes.end(),
               std::inserter(plane.nodes, plane.nodes.end()));
     plane.rootRepresentativeness = 0;
 

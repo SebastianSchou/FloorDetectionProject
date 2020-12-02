@@ -31,16 +31,11 @@ public:
   Plane(void)
   {
     rootRepresentativeness = 0.0;
-    samples = 0.0;
     isShowing = true;
-    rotate = 0.0;
-    normal = cv::Mat::zeros(cv::Size(1, 3), CV_64F);
-    mean = cv::Mat::zeros(cv::Size(1, 3), CV_64F);
-    color = cv::Mat::zeros(cv::Size(1, 3), CV_8U);
     samples = 0;
     type = PLANE_TYPE_OTHER;
     topView = cv::Mat(cv::Size(TOP_VIEW_WIDTH, TOP_VIEW_HEIGHT), CV_8U,
-                      cv::Scalar::all(0));
+                      cv::Scalar(0));
     area = 0.0;
   }
 
@@ -80,7 +75,7 @@ public:
               break;
             } else {
               plane.rootRepresentativeness -= node->rootRepresentativeness;
-              plane.mean -= node->mean / plane.nodes.size();
+              plane.mean -= node->mean.mul(1 / plane.nodes.size());
               plane.samples -= node->samples;
               plane.nodes.erase(j);
             }
@@ -135,19 +130,6 @@ public:
     return rootRepresentativeness > p.rootRepresentativeness;
   }
 
-  cv::Mat getClosestPointToOrigin()
-  {
-    if ((theta >= 0.5 * PI) || (theta < -0.5 * PI)) {
-      return normalizeVector(normal) * -rho;
-    }
-    return normalizeVector(normal) * rho;
-  }
-
-  double getDistanceToPlane(cv::Mat& point)
-  {
-    return std::abs((point - position).dot(normalizeVector(normal)));
-  }
-
   void insert3dPoint(const cv::Vec3d& point, std::mutex& mutex)
   {
     std::lock_guard<std::mutex> lock(mutex);
@@ -160,8 +142,8 @@ public:
     points2d.push_back(point);
   }
 
-  void insertRestrictedArea(const std::vector<cv::Point> area,
-                            std::mutex                 & mutex)
+  void insertRestrictedArea(const std::vector<cv::Point>& area,
+                            std::mutex                  & mutex)
   {
     std::lock_guard<std::mutex> lock(mutex);
     restrictedAreas.push_back(area);
@@ -181,11 +163,12 @@ public:
     cv::rectangle(image2dPoints, p1, p2, cv::Scalar::all(255), cv::FILLED);
   }
 
-  double theta, phi, rho, votes, rootRepresentativeness, rotate, thetaIndex,
-         thetaAbs, phiAbs, area;
+  double theta, phi, rho, votes, rootRepresentativeness, thetaIndex, area;
   int phiIndex, rhoIndex, samples, id, type;
   bool isShowing;
-  cv::Mat position, mean, normal, color, image2dPoints, topView;
+  cv::Mat image2dPoints, topView;
+  cv::Vec3d mean, position, normal;
+  cv::Scalar color;
   std::vector<std::vector<cv::Point> > traversableAreas, restrictedAreas;
   std::vector<std::pair<double, std::vector<cv::Point> > > heightLimitedAreas;
   std::vector<std::vector<double> > validCoordinates;

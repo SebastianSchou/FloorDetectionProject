@@ -35,10 +35,10 @@ public:
 
   void addNodeReference(Quadtree *node)
   {
-    votedNotes.insert(node);
+    votedNodes.insert(node);
   }
 
-  std::set<Quadtree *> votedNotes;
+  std::set<Quadtree *> votedNodes;
 
   Quadtree *lastVotedNote;
   bool peak, visited, voted, top;

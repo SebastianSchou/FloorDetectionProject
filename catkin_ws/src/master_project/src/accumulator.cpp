@@ -6,9 +6,9 @@ Accumulator::Accumulator(const double maxDistance,
                          const float  phiDeltaValue)
 {
   neighborSize = 27;
-  thetaMax = PI2;
-  phiMax = PI;
-  maxVotes = 0;
+  thetaMax = CV_PI * 2.0;
+  phiMax = CV_PI;
+  maxVotes = 0.0;
   rhoDelta = rhoDeltaValue;
   phiDelta = phiDeltaValue;
 
@@ -46,7 +46,7 @@ std::set<Quadtree *> Accumulator::convolutionNodes(const double thetaIndex,
   std::set<AccumulatorCell *> neighbors = getNeighborCells(thetaIndex, phiIndex,
                                                            rhoIndex, 26);
   for (AccumulatorCell *cell : neighbors) {
-    std::move(cell->votedNotes.begin(), cell->votedNotes.end(),
+    std::move(cell->votedNodes.begin(), cell->votedNodes.end(),
               std::inserter(nodes, nodes.end()));
   }
   return nodes;
@@ -227,14 +227,14 @@ void Accumulator::getValues(double& theta, double& phi, double& rho,
   rho = (double)(rhoIndex) * rhoDelta;
 }
 
-void Accumulator::sphericalToCartesianCoordinates(cv::Mat     & normal,
+void Accumulator::sphericalToCartesianCoordinates(cv::Vec3d   & normal,
                                                   const double& theta,
                                                   const double& phi,
                                                   const double& rho)
 {
-  normal.at<double>(0) = sin(phi) * cos(theta) * rho;
-  normal.at<double>(1) = sin(phi) * sin(theta) * rho;
-  normal.at<double>(2) = cos(phi) * rho;
+  normal[0] = sin(phi) * cos(theta) * rho;
+  normal[1] = sin(phi) * sin(theta) * rho;
+  normal[2] = cos(phi) * rho;
 }
 
 double Accumulator::fixTheta(double theta, const int phi)

@@ -31,7 +31,9 @@ public:
   void         setMinSamplesInNode(const int minSamplesInNode);
   const int    getMinSamplesInNode() const;
 
-  cv::Mat covariance, normal, mean, color;
+  cv::Matx33d covariance;
+  cv::Vec3d mean, normal;
+  cv::Scalar color;
   cv::Point minBounds, maxBounds;
   Quadtree *root, *children;
   int samples, level, id, idNo;

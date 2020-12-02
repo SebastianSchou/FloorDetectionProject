@@ -25,7 +25,6 @@ void       drawPlanePoints(cv::Mat          & image,
                            std::vector<Plane> planes,
                            CameraData       & cameraData);
 void       drawPlanes(cv::Mat& image, const std::vector<Plane>& planes);
-cv::Scalar getPlaneColors(const Plane& plane);
 cv::Mat    drawTopView(const CameraData        & cameraData,
                        const std::vector<Plane>& planes,
                        const cv::Mat           & nonPlanePoints);

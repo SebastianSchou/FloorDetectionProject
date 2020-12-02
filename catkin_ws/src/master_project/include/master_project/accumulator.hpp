@@ -49,7 +49,7 @@ public:
   void getValues(double& theta, double& phi, double& rho,
                  const double& thetaIndex, const int& phiIndex,
                  const int& rhoIndex);
-  void sphericalToCartesianCoordinates(cv::Mat     & normal,
+  void sphericalToCartesianCoordinates(cv::Vec3d   & normal,
                                        const double& theta,
                                        const double& phi,
                                        const double& rho);
@@ -57,18 +57,13 @@ public:
 
   std::vector<std::vector<AccumulatorCellArray *> > data;
   int neighborSize;
-  double thetaMax;
-  double phiMax;
-  double maxVotes;
+  double thetaMax, phiMax, maxVotes;
 
   // Accumulator dimensions
-  short phiLength;
-  short rhoLength;
-  short thetaLength;
+  short phiLength, rhoLength, thetaLength;
 
   // Discretization step size
-  double rhoDelta;
-  double phiDelta;
+  double rhoDelta, phiDelta;
 };
 
 #endif // ACCUMULATOR_HPP

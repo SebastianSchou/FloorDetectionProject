@@ -19,50 +19,48 @@ public:
   int phiIndex, rhoIndex, votes;
   bool visited;
 
-  cv::Mat covarianceSpherical, covarianceSphericalInversed;
+  cv::Matx33d covarianceSpherical, covarianceSphericalInversed;
 
   void computeKernelParameters()
   {
-    cv::Mat jacobian = cv::Mat::zeros(cv::Size(3, 3), CV_64F);
-
-    cv::Mat n = normalizeVector(node->normal);
+    cv::Matx33d jacobian;
+    cv::Vec3d n = cv::normalize(node->normal);
 
     // Jacobian Matrix calculation
     double  epsilon = NONZERO;
-    cv::Mat p = n * rho;
-    double  pX = p.at<double>(X), pY = p.at<double>(Y), pZ = p.at<double>(Z);
-    double  w = square(pX) + square(pY);
-    double  p2 = w + square(pZ);
+    cv::Vec3d p = n * rho;
+    double  w = square(p[X]) + square(p[Y]);
+    double  p2 = w + square(p[Z]);
     double  sqrtW = std::sqrt(w);
 
-    // Derivatives of pX*μx + pY*μy + pZ*μz
-    jacobian.at<double>(X, X) = n.at<double>(X);
-    jacobian.at<double>(X, Y) = n.at<double>(Y);
-    jacobian.at<double>(X, Z) = n.at<double>(Z);
+    // Derivatives of p[X]*μx + p[Y]*μy + p[Z]*μz
+    jacobian(X, X) = n[X];
+    jacobian(X, Y) = n[Y];
+    jacobian(X, Z) = n[Z];
 
-    // Derivatives of arrcos(pZ)
-    jacobian.at<double>(Y, X) = (sqrtW < epsilon) ? (pX * pZ) / epsilon :
-                                (pX * pZ) / (sqrtW * p2);
-    jacobian.at<double>(Y, Y) = (sqrtW < epsilon) ? (pY * pZ) / epsilon :
-                                (pY * pZ) / (sqrtW * p2);
-    jacobian.at<double>(Y, Z) = (p2 < epsilon) ? -sqrtW / epsilon :
-                                -sqrtW / p2;
+    // Derivatives of arrcos(p[Z])
+    jacobian(Y, X) = (sqrtW < epsilon) ?
+                     (p[X] * p[Z]) / epsilon : (p[X] * p[Z]) / (sqrtW * p2);
+    jacobian(Y, Y) = (sqrtW < epsilon) ?
+                     (p[Y] * p[Z]) / epsilon : (p[Y] * p[Z]) / (sqrtW * p2);
+    jacobian(Y, Z) = (p2 < epsilon) ? -sqrtW / epsilon : -sqrtW / p2;
 
-    // Derivatives of atan2(pY, pX)
-    jacobian.at<double>(Z, X) = (w < epsilon) ? -pY / epsilon : -pY / w;
-    jacobian.at<double>(Z, Y) = (w < epsilon) ? pX / epsilon : pX / w;
-    jacobian.at<double>(Z, Z) = 0.0;
+    // Derivatives of atan2(p[Y], p[X])
+    jacobian(Z, X) = (w < epsilon) ? -p[Y] / epsilon : -p[Y] / w;
+    jacobian(Z, Y) = (w < epsilon) ? p[X] / epsilon : p[X] / w;
+    jacobian(Z, Z) = 0.0;
 
     // Covariance matrix for the gaussian kernel
     covarianceSpherical = jacobian * node->covariance * jacobian.t();
 
     // Cluster representativeness
-    covarianceSpherical.at<double>(X, X) += NONZERO;
+    covarianceSpherical(X, X) += NONZERO;
     covarianceSphericalInversed = covarianceSpherical.inv();
     gaussianPdfConstant = SQRTOFCUBIC2PI *
                           std::sqrt(std::abs(cv::determinant(
                                                covarianceSpherical)));
-    cv::Mat eigenvalues, eigenvectors;
+    cv::Vec3d eigenvalues;
+    cv::Matx33d eigenvectors;
     cv::eigen(covarianceSpherical, eigenvalues, eigenvectors);
 
     // Weights for area importance (wa) and sample density (wd)
@@ -79,23 +77,18 @@ public:
                                    (double)node->root->samples * wd;
 
     // Compute the voting limit for this kernel
-    double radius = 2.0 *
-                    std::sqrt(eigenvalues.at<double>(MIN_EIGENVALUE_INDEX));
-    votingLimit =
-      gaussianPdf(eigenvectors.at<double>(X, MIN_EIGENVALUE_INDEX) * radius,
-                  eigenvectors.at<double>(Y, MIN_EIGENVALUE_INDEX) * radius,
-                  eigenvectors.at<double>(Z, MIN_EIGENVALUE_INDEX) * radius);
+    double radius = 2.0 * std::sqrt(eigenvalues[MIN_EIGENVALUE_INDEX]);
+    votingLimit = gaussianPdf(eigenvectors(X, MIN_EIGENVALUE_INDEX) * radius,
+                              eigenvectors(Y, MIN_EIGENVALUE_INDEX) * radius,
+                              eigenvectors(Z, MIN_EIGENVALUE_INDEX) * radius);
   }
 
   double gaussianPdf(const double rho, const double phi,
                      const double theta)
   {
-    double temp[3] = { rho, phi, theta };
-
-    cv::Mat displacement(cv::Size(1, 3), CV_64F, (void *)temp,
-                         cv::Mat::AUTO_STEP);
-    cv::Mat d = displacement.t() * covarianceSphericalInversed * displacement;
-    return std::exp(-0.5 * d.at<double>(0)) / gaussianPdfConstant;
+    cv::Vec3d displacement(rho, phi, theta);
+    cv::Scalar d = displacement.t() * covarianceSphericalInversed * displacement;
+    return std::exp(-0.5 * d[0]) / gaussianPdfConstant;
   }
 };
 

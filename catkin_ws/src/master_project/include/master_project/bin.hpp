@@ -16,11 +16,6 @@ struct Bin {
   short  phiIndex;
   short  rhoIndex;
   double votes;
-
-  bool operator<(const Bin bin) const
-  {
-    return votes > bin.votes;
-  }
 };
 
 #endif // BIN_HPP

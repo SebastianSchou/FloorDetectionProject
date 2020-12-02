@@ -29,15 +29,25 @@ int loadPicture(int argc, char **argv, const std::string& filePath)
 
   auto start = std::chrono::steady_clock::now();
 
-  // Proces planes
-  HoughPlaneTransform houghPlaneTransform(cameraData);
+  // Process planes
+  HoughPlaneTransform houghPlaneTransform(cameraData, true);
   std::vector<Plane>  planes = houghPlaneTransform.planes;
+  if (planes.empty()) {
+    ROS_INFO("No planes found. Processing time: %.3f ms", msUntilNow(start));
+    cv::imshow("Realsense color normal", cameraData.normalColorImage);
+    cv::waitKey(0);
+
+    // Shutdown
+    ros::shutdown();
+    return EXIT_SUCCESS;
+
+  }
   auto timePlanePoints = std::chrono::steady_clock::now();
   Plane nonPlanePoints = PlaneAnalysis::computePlanePoints(planes,
                                                            cameraData);
   PlaneAnalysis::computePlaneContour(planes, nonPlanePoints);
-  printf("Processing time: %.3f ms. Computing plane points: %.3f ms\n",
-         msUntilNow(start), msUntilNow(timePlanePoints));
+  ROS_INFO("Processing time: %.3f ms. Computing plane points time: %.3f ms\n",
+           msUntilNow(start), msUntilNow(timePlanePoints));
 
   // PlaneAnalysis::printPlanesInformation(planes);
 

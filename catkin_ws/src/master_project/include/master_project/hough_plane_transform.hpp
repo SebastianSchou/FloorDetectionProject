@@ -16,21 +16,25 @@ public:
     auto start = std::chrono::steady_clock::now();
 
     root.initializeRoot(cameraData);
+    float timeInitializeQuadtree = msUntilNow(start);
     root.divideIntoQuadrants();
-    float timeQuadtree = msUntilNow(start);
+    float timeQuadtree = msUntilNow(start) - timeInitializeQuadtree;
     float rhoDelta = 0.08;             // [m]
-    float phiDelta = 4.0 * PI / 180.0; // [radians]
+    float phiDelta = 4.0 * CV_PI / 180.0; // [radians]
     accumulator = new Accumulator(root.maxPlaneDistance, root.maxPhiAngle,
                                   rhoDelta, phiDelta);
     voting(root, *accumulator, usedBins, usedKernels);
-    float timeVoting = msUntilNow(start) - timeQuadtree;
-    peakDetection(planes, *accumulator, usedKernels, usedBins);
+    float timeVoting = msUntilNow(start) - timeQuadtree -
+                       timeInitializeQuadtree;
+    peakDetection(planes, *accumulator, usedBins, usedKernels);
     PlaneAnalysis::removeSmallPlanes(planes);
     std::sort(planes.begin(), planes.end());
-    float timePeak = msUntilNow(start) - timeQuadtree - timeVoting;
+    float timePeak = msUntilNow(start) - timeQuadtree - timeVoting -
+                     timeInitializeQuadtree;
     if (printTime) {
-      ROS_INFO("Quadtree: %.3f ms. Voting: %.3f ms. Peak detection: %.3f ms",
-               timeQuadtree, timeVoting, timePeak);  
+      ROS_INFO("Initialize quadtree: %.3f ms. Quadtree: %.3f ms. "
+               "Voting: %.3f ms. Peak detection: %.3f ms",
+               timeInitializeQuadtree, timeQuadtree, timeVoting, timePeak);
     }
   }
 

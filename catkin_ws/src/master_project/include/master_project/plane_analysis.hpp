@@ -1,8 +1,8 @@
 #ifndef PLANE_ANALYSIS_HPP
 #define PLANE_ANALYSIS_HPP
 
-#define MAX_ANGLE_DIFFERENCE 5.0 * PI / 180.0 // [radians]
-#define MAX_DISTANCE_DIFFERENCE 0.1           // [m]
+#define MAX_ANGLE_DIFFERENCE 5.0 * CV_PI / 180.0 // [radians]
+#define MAX_DISTANCE_DIFFERENCE 0.10             // [m]
 
 #include "master_project/plane.hpp"
 
@@ -12,14 +12,12 @@ bool   isGround(const Plane& currentFloor, const Plane& plane,
                 const float cameraHeight);
 bool   isWall(const Plane& plane);
 bool   isBetterWall(const Plane& currentWall, const Plane& plane);
-bool   isCeiling(const Plane currentCeil, const Plane& plane);
+bool   isCeiling(const Plane& currentCeil, const Plane& plane);
 void   assignPlaneType(std::vector<Plane>& planes,
                        const float         cameraHeight = 0.0);
-bool   hasSimilarAngle(const Plane& plane1, const Plane& plane2);
 double getAngleDifference(const Plane& plane1, const Plane& plane2);
 bool   hasSimilarDistance(const Plane& plane1, const Plane& plane2);
 double getDistanceDifference(const Plane& plane1, const Plane& plane2);
-bool   isSimilar(const Plane& plane1, const Plane& plane2);
 bool   hasSimilarNormal(const Plane& plane1, const Plane& plane2);
 void   transferNodes(Plane& plane1, Plane& plane2);
 Plane  computePlanePoints(std::vector<Plane>& planes,

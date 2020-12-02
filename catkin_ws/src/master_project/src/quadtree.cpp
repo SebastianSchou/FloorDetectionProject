@@ -18,15 +18,12 @@ Quadtree::Quadtree()
 {
   root = NULL;
   children = NULL;
-  mean = cv::Mat::zeros(cv::Size(1, 3), CV_64F);
-  covariance = cv::Mat::zeros(cv::Size(3, 3), CV_64F);
-  normal = cv::Mat::zeros(cv::Size(1, 3), CV_64F);
-  color = cv::Mat::zeros(cv::Size(1, 3), CV_64F);
-  areaThickness = 0;
-  minVariance = 0;
+  areaThickness = 0.0;
+  minVariance = 0.0;
   samples = 0;
   isPlane = false;
-  maxPlaneDistance = 0.0; maxPhiAngle = 0.0;
+  maxPlaneDistance = 0.0;
+  maxPhiAngle = 0.0;
   rootRepresentativeness = 0.0;
   sampleDensity = 0.0;
   rho = 0.0; phi = 0.0; theta = 0.0;
@@ -73,14 +70,14 @@ void Quadtree::divideIntoQuadrants()
       // If the distance from plane to camera center is negative,
       // inverse the normal, and make certain that arccos can be taken
       // to the z direction of the normal vector
-      if (normalizeVector(mean).dot(normal) < 0) {
+      if (cv::normalize(mean).dot(normal) < 0) {
         normal *= -1.0;
       }
-      if (normal.at<double>(2) > 1.0) {
-        normal.at<double>(2) = 1.0;
+      if (normal[Z] > 1.0) {
+        normal[Z] = 1.0;
       }
-      theta = std::atan2(normal.at<double>(1), normal.at<double>(0));
-      phi = std::acos(normal.at<double>(2));
+      theta = std::atan2(normal[Y], normal[X]);
+      phi = std::acos(normal[Z]);
       rho = mean.dot(normal);
 
       // Find max plane distance and max phi angle
@@ -136,61 +133,58 @@ void Quadtree::PCA()
   // Get eigenvalues and eigenvectors. They are sorted such that eigenvalue 1
   // is largest and eigenvalue 3 is smallest. Value and vector correspond
   // w.r.t. index
-  cv::Mat eigenvalues, eigenvectors;
+  cv::Vec3d eigenvalues;
+  cv::Matx33d eigenvectors;
   cv::eigen(covariance, eigenvalues, eigenvectors);
 
   // Get the smallest variance
-  minVariance = eigenvalues.at<double>(MIN_EIGENVALUE_INDEX) /
-                eigenvalues.at<double>(1);
+  minVariance = eigenvalues[MIN_EIGENVALUE_INDEX] / eigenvalues[1];
 
   // Get normal vector, which is the eigenvector with the smallest eigenvalue
-  normal.at<double>(X) = eigenvectors.at<double>(MIN_EIGENVALUE_INDEX, X);
-  normal.at<double>(Y) = eigenvectors.at<double>(MIN_EIGENVALUE_INDEX, Y);
-  normal.at<double>(Z) = eigenvectors.at<double>(MIN_EIGENVALUE_INDEX, Z);
+  normal[X] = eigenvectors(MIN_EIGENVALUE_INDEX, X);
+  normal[Y] = eigenvectors(MIN_EIGENVALUE_INDEX, Y);
+  normal[Z] = eigenvectors(MIN_EIGENVALUE_INDEX, Z);
 }
 
 void Quadtree::computeMean()
 {
   SummedAreaTable *sat = &(root->sat);
 
-  mean.at<double>(X) = sat->satX.getArea(minBounds, maxBounds) / samples;
-  mean.at<double>(Y) = sat->satY.getArea(minBounds, maxBounds) / samples;
-  mean.at<double>(Z) = sat->satZ.getArea(minBounds, maxBounds) / samples;
+  mean[X] = sat->satX.getArea(minBounds, maxBounds) / samples;
+  mean[Y] = sat->satY.getArea(minBounds, maxBounds) / samples;
+  mean[Z] = sat->satZ.getArea(minBounds, maxBounds) / samples;
 }
 
 void Quadtree::computeCovariance()
 {
   SummedAreaTable *sat = &(root->sat);
 
-  cv::Mat cov = cv::Mat::zeros(3, 3, CV_64F);
-  double  meanX = mean.at<double>(X),
-          meanY = mean.at<double>(Y),
-          meanZ = mean.at<double>(Z);
+  cv::Matx33d cov(3, 3, CV_64F);
 
-  cov.at<double>(X, X) = (sat->satXX.getArea(minBounds, maxBounds) -
-                          2 * meanX * sat->satX.getArea(minBounds, maxBounds) +
-                          samples * meanX * meanX) / (samples - 1);
-  cov.at<double>(Y, Y) = (sat->satYY.getArea(minBounds, maxBounds) -
-                          2 * meanY * sat->satY.getArea(minBounds, maxBounds) +
-                          samples * meanY * meanY) / (samples - 1);
-  cov.at<double>(Z, Z) = (sat->satZZ.getArea(minBounds, maxBounds) -
-                          2 * meanZ * sat->satZ.getArea(minBounds, maxBounds) +
-                          samples * meanZ * meanZ) / (samples - 1);
-  cov.at<double>(X, Y) = (sat->satXY.getArea(minBounds, maxBounds) -
-                          meanX * sat->satY.getArea(minBounds, maxBounds) -
-                          meanY * sat->satX.getArea(minBounds, maxBounds) +
-                          samples * meanX * meanY) / (samples - 1);
-  cov.at<double>(X, Z) = (sat->satXZ.getArea(minBounds, maxBounds) -
-                          meanX * sat->satZ.getArea(minBounds, maxBounds) -
-                          meanZ * sat->satX.getArea(minBounds, maxBounds) +
-                          samples * meanX * meanZ) / (samples - 1);
-  cov.at<double>(Y, Z) = (sat->satYZ.getArea(minBounds, maxBounds) -
-                          meanY * sat->satZ.getArea(minBounds, maxBounds) -
-                          meanZ * sat->satY.getArea(minBounds, maxBounds) +
-                          samples * meanY * meanZ) / (samples - 1);
-  cov.at<double>(Y, X) = cov.at<double>(X, Y);
-  cov.at<double>(Z, X) = cov.at<double>(X, Z);
-  cov.at<double>(Z, Y) = cov.at<double>(Y, Z);
+  cov(X, X) = (sat->satXX.getArea(minBounds, maxBounds) -
+               2 * mean[X] * sat->satX.getArea(minBounds, maxBounds) +
+               samples * mean[X] * mean[X]) / (samples - 1);
+  cov(Y, Y) = (sat->satYY.getArea(minBounds, maxBounds) -
+               2 * mean[Y] * sat->satY.getArea(minBounds, maxBounds) +
+               samples * mean[Y] * mean[Y]) / (samples - 1);
+  cov(Z, Z) = (sat->satZZ.getArea(minBounds, maxBounds) -
+               2 * mean[Z] * sat->satZ.getArea(minBounds, maxBounds) +
+               samples * mean[Z] * mean[Z]) / (samples - 1);
+  cov(X, Y) = (sat->satXY.getArea(minBounds, maxBounds) -
+               mean[X] * sat->satY.getArea(minBounds, maxBounds) -
+               mean[Y] * sat->satX.getArea(minBounds, maxBounds) +
+               samples * mean[X] * mean[Y]) / (samples - 1);
+  cov(X, Z) = (sat->satXZ.getArea(minBounds, maxBounds) -
+               mean[X] * sat->satZ.getArea(minBounds, maxBounds) -
+               mean[Z] * sat->satX.getArea(minBounds, maxBounds) +
+               samples * mean[X] * mean[Z]) / (samples - 1);
+  cov(Y, Z) = (sat->satYZ.getArea(minBounds, maxBounds) -
+               mean[Y] * sat->satZ.getArea(minBounds, maxBounds) -
+               mean[Z] * sat->satY.getArea(minBounds, maxBounds) +
+               samples * mean[Y] * mean[Z]) / (samples - 1);
+  cov(Y, X) = cov(X, Y);
+  cov(Z, X) = cov(X, Z);
+  cov(Z, Y) = cov(Y, Z);
   covariance = cov;
 }
 
@@ -202,8 +196,8 @@ void Quadtree::initializeRoot(CameraData& cameraData)
   idNo++;
   minBounds = cv::Point(0, 0);
   maxBounds = cv::Point(cameraData.width - 1, cameraData.height - 1);
-  cameraData.data3d = cv::Mat(cv::Size(cameraData.width, cameraData.height),
-                              CV_64FC3, cv::Scalar::all(0));
+  cameraData.data3d =
+    cv::Mat(cameraData.depthData.size(), CV_64FC3, cv::Scalar::all(0));
 
   // Remove borders of depth data, as it is unreliable
   int rows = cameraData.height, cols = cameraData.width;

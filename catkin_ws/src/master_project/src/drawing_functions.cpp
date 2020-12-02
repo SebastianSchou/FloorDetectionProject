@@ -129,17 +129,15 @@ void DrawingFunctions::drawPlanesInQuadtree(cv::Mat   & image,
                                             CameraData& cameraData)
 {
   int scale = cameraData.filterVariables.decimationScaleFactor;
-  double r = node.color.at<uchar>(0), g = node.color.at<uchar>(1),
-         b = node.color.at<uchar>(2);
 
-  if (node.isPlane && ((r != 0) || (g != 0) || (b != 0))) {
+  if (node.isPlane && node.color != cv::Scalar::all(0)) {
     cv::Mat rect(image.rows, image.cols, CV_8UC3, cv::Scalar::all(0));
 
 
     cv::rectangle(rect,
                   node.minBounds * scale,
                   node.maxBounds * scale,
-                  cv::Scalar(r, g, b),
+                  node.color,
                   cv::FILLED);
     cv::rectangle(rect,
                   node.minBounds * scale,
@@ -165,12 +163,9 @@ void DrawingFunctions::assignColorToPlane(Plane& plane, int r, int g, int b)
   b = std::max(0, std::min(255, b));
 
   // Assign to each node in plane
-  color.at<uchar>(0) = r;
-  color.at<uchar>(1) = g;
-  color.at<uchar>(2) = b;
-  plane.color = color;
+  plane.color = cv::Scalar(r, g, b);
   for (Quadtree *node : plane.nodes) {
-    node->color = color;
+    node->color = plane.color;
   }
 }
 
@@ -178,10 +173,7 @@ void DrawingFunctions::assignColorToPlanes(std::vector<Plane>& planes)
 {
   for (unsigned int i = 0; i < planes.size(); i++) {
     int colorValue = (int)(255 / (int)(i / 6 + 1));
-    cv::Mat color(cv::Size(1, 3), CV_8U, cv::Scalar::all(0));
-    if ((planes[i].color.at<uchar>(0) != 0) ||
-        (planes[i].color.at<uchar>(1) != 0) ||
-        (planes[i].color.at<uchar>(2) != 0)) {
+    if (planes[i].color != cv::Scalar::all(0)) {
       continue;
     }
     switch (i % 6) {
@@ -213,15 +205,12 @@ void DrawingFunctions::drawPlanePoints(cv::Mat          & image,
 {
   int scale = cameraData.filterVariables.decimationScaleFactor;
 
-  cv::Mat rect(image.rows, image.cols, CV_8UC3, cv::Scalar::all(0));
+  cv::Mat rect(image.size(), CV_8UC3, cv::Scalar::all(0));
   for (const Plane& plane : planes) {
-    uchar r = plane.color.at<uchar>(0),
-                    g = plane.color.at<uchar>(1),
-                    b = plane.color.at<uchar>(2);
     for (const cv::Vec2i point : plane.points2d) {
       int col = point[0] * scale, row = point[1] * scale;
       cv::Point p1(row, col), p2(row + scale * 2, col + scale * 2);
-      cv::rectangle(rect, p1, p2, cv::Scalar(r, g, b), cv::FILLED);
+      cv::rectangle(rect, p1, p2, plane.color, cv::FILLED);
     }
   }
   cv::addWeighted(image, 1.0, rect, 0.8, 0.0, image);
@@ -230,26 +219,15 @@ void DrawingFunctions::drawPlanePoints(cv::Mat          & image,
 void DrawingFunctions::drawPlanes(cv::Mat                 & image,
                                   const std::vector<Plane>& planes)
 {
-  cv::Mat im;
   if (planes.size() == 0) {
     return;
   }
-  im = cv::Mat::zeros(planes[0].image2dPoints.size(), CV_8UC3);
+  cv::Mat im(planes[0].image2dPoints.size(), CV_8UC3, cv::Scalar::all(0));
   for (const Plane& plane : planes) {
-    cv::Scalar color = getPlaneColors(plane);
-    im.setTo(color, plane.image2dPoints);
+    im.setTo(plane.color, plane.image2dPoints);
   }
   cv::resize(im, im, im.size() * 4);
   cv::addWeighted(image, 1.0, im, 0.8, 0.0, image);
-}
-
-cv::Scalar DrawingFunctions::getPlaneColors(const Plane& plane)
-{
-  uchar r = plane.color.at<uchar>(0);
-  uchar g = plane.color.at<uchar>(1);
-  uchar b = plane.color.at<uchar>(2);
-
-  return cv::Scalar(r, g, b);
 }
 
 cv::Mat DrawingFunctions::drawTopView(const CameraData        & cameraData,
@@ -263,17 +241,16 @@ cv::Mat DrawingFunctions::drawTopView(const CameraData        & cameraData,
     if (plane.type == PLANE_TYPE_CEILING) {
       continue;
     }
-    cv::Scalar color = getPlaneColors(plane);
     if (((plane.type == PLANE_TYPE_FLOOR) ||
          (plane.type == PLANE_TYPE_OTHER)) &&
         (plane.traversableAreas.size() != 0)) {
-      cv::drawContours(im, plane.traversableAreas, -1, color, cv::FILLED);
+      cv::drawContours(im, plane.traversableAreas, -1, plane.color, cv::FILLED);
       if (plane.restrictedAreas.size() != 0) {
         cv::drawContours(im, plane.restrictedAreas, -1, cv::Scalar::all(0),
                          cv::FILLED);
       }
     } else {
-      im.setTo(color, plane.topView);
+      im.setTo(plane.color, plane.topView);
     }
   }
   im.setTo(cv::Scalar::all(255), nonPlanePoints);
