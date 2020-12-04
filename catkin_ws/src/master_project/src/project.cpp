@@ -42,30 +42,40 @@ int main(int argc, char **argv)
       return EXIT_ERROR;
     }
 
+    // Process planes
     HoughPlaneTransform houghPlaneTransform(cameraData);
     std::vector<Plane>  planes = houghPlaneTransform.planes;
+    if (planes.empty()) {
+      ROS_INFO("No planes found");
+      cv::imshow("Realsense color normal", cameraData.normalColorImage);
+      key = cv::waitKey(1);
+    } else {
+      auto timePlanePoints = std::chrono::steady_clock::now();
+      Plane nonPlanePoints = PlaneAnalysis::computePlanePoints(planes,
+                                                               cameraData);
+      PlaneAnalysis::computePlaneContour(planes, nonPlanePoints);
 
-    // Calculate average itteration time
-    timeSum += msUntilNow(start);
-    iteration++;
+      // Calculate average itteration time
+      timeSum += msUntilNow(start);
+      iteration++;
 
-    // Draw illustrations
-    DrawingFunctions::drawQuadtreeBorders(cameraData.colorizedDepthImage,
-                                          houghPlaneTransform.root);
-    DrawingFunctions::assignColorToPlanes(planes);
-    DrawingFunctions::drawPlanesInQuadtree(cameraData.depthAlignedColorImage,
-                                           houghPlaneTransform.root,
-                                           cameraData);
-    cv::Mat accumDrawing = DrawingFunctions::drawAccumulatorCellVotes(
-      IMAGE_WIDTH, IMAGE_HEIGHT, *houghPlaneTransform.accumulator);
+      // Draw
+      cv::Mat cleanedPlanePoints = cameraData.depthAlignedColorImage.clone();
+      DrawingFunctions::assignColorToPlanes(planes);
+      DrawingFunctions::drawOnlyPlaneQuadtreeBorders(cleanedPlanePoints,
+                                                     planes,
+                                                     cameraData);
+      DrawingFunctions::drawPlanes(cleanedPlanePoints, planes);
+      cv::Mat topView =
+        DrawingFunctions::drawTopView(cameraData, planes,
+                                      nonPlanePoints.topView);
 
-    // Show data
-    cv::imshow("Realsense depth", cameraData.colorizedDepthImage);
-    cv::imshow("Accumulator", accumDrawing);
-    cv::imshow("Realsense color", cameraData.depthAlignedColorImage);
-    cv::imshow("Realsense color normal", cameraData.normalColorImage);
-    cv::imshow("Realsense IR", cameraData.irImage);
-    key = cv::waitKey(1);
+      // Show data
+      cv::imshow("Top view", topView);
+      cv::imshow("Realsense plane points cleaned", cleanedPlanePoints);
+      cv::imshow("Realsense color normal", cameraData.normalColorImage);
+      key = cv::waitKey(1);
+    }
   }
   ROS_INFO("Script ended. Shutting down. Avg. processing time: %.3f ms",
            timeSum / (float)iteration);
