@@ -21,6 +21,7 @@
 #define X 0
 #define Y 1
 #define Z 2
+#define MIN_CONTOUR_SIZE 3 // [points]
 
 bool PlaneAnalysis::isGround(const Plane& currentFloor, const Plane& plane,
                              const float cameraHeight)
@@ -35,14 +36,18 @@ bool PlaneAnalysis::isGround(const Plane& currentFloor, const Plane& plane,
     return (plane.rho > MIN_FLOOR_DISTANCE) &&
            (plane.rho < MAX_FLOOR_DISTANCE) &&
            (currentFloor.rho < plane.rho) &&
-           (std::abs(std::abs(plane.phi) - CV_PI / 2.0) < MAX_INCLINE_RADIANS) &&
-           (std::abs(std::abs(plane.theta) - CV_PI / 2.0) < MAX_INCLINE_RADIANS) &&
+           (std::abs(std::abs(plane.phi) - CV_PI / 2.0) <
+            MAX_INCLINE_RADIANS) &&
+           (std::abs(std::abs(plane.theta) - CV_PI / 2.0) <
+            MAX_INCLINE_RADIANS) &&
            (plane.normal[Y] > 0);
   } else {
     return (std::abs(cameraHeight - plane.rho) <
             std::abs(cameraHeight - currentFloor.rho)) &&
-           (std::abs(std::abs(plane.phi) - CV_PI / 2.0) < MAX_INCLINE_RADIANS) &&
-           (std::abs(std::abs(plane.theta) - CV_PI / 2.0) < MAX_INCLINE_RADIANS) &&
+           (std::abs(std::abs(plane.phi) - CV_PI / 2.0) <
+            MAX_INCLINE_RADIANS) &&
+           (std::abs(std::abs(plane.theta) - CV_PI / 2.0) <
+            MAX_INCLINE_RADIANS) &&
            (plane.normal[Y] > 0);
   }
 }
@@ -70,7 +75,8 @@ bool PlaneAnalysis::isCeiling(const Plane& currentCeil, const Plane& plane)
   // - Y-direction of the normal is negative
   return (currentCeil.rho < plane.rho) &&
          (std::abs(std::abs(plane.phi) - CV_PI / 2.0) < MAX_INCLINE_RADIANS) &&
-         (std::abs(std::abs(plane.theta) - CV_PI / 2.0) < MAX_INCLINE_RADIANS) &&
+         (std::abs(std::abs(plane.theta) - CV_PI / 2.0) <
+          MAX_INCLINE_RADIANS) &&
          (plane.normal[Y] < 0);
 }
 
@@ -114,7 +120,8 @@ void PlaneAnalysis::assignPlaneType(std::vector<Plane>& planes,
 
 bool PlaneAnalysis::hasSimilarNormal(const Plane& plane1, const Plane& plane2)
 {
-  return cv::norm(plane1.normal - plane2.normal, cv::NORM_L2) < MAX_PLANE_NORMAL_DIFF;
+  return cv::norm(plane1.normal - plane2.normal,
+                  cv::NORM_L2) < MAX_PLANE_NORMAL_DIFF;
 }
 
 double PlaneAnalysis::getAngleDifference(const Plane& plane1,
@@ -159,7 +166,7 @@ void PlaneAnalysis::transferNodes(Plane& plane1, Plane& plane2)
 void PlaneAnalysis::calculateNewNormal(Plane& plane)
 {
   cv::Vec3d normal(0.0, 0.0, 0.0);
-  double rho = 0.0;
+  double    rho = 0.0;
   for (const Quadtree *node : plane.nodes) {
     normal += node->normal;
     rho += node->rho;
@@ -487,6 +494,11 @@ void PlaneAnalysis::computePlaneContour(std::vector<Plane>& planes,
     // Assign contours
     for (size_t i = 0; i < contours.size(); i++) {
       const std::vector<cv::Point> contour = contours[i];
+      if (contour.size() < MIN_CONTOUR_SIZE) {
+        contours.erase(contours.begin() + i);
+        i--;
+        continue;
+      }
 
       // Get area
       float area = cv::contourArea(contour) * square(TOP_VIEW_DELTA);
@@ -501,6 +513,12 @@ void PlaneAnalysis::computePlaneContour(std::vector<Plane>& planes,
       auto m = cv::moments(contour);
       int  cx = int(m.m10 / m.m00);
       int  cy = int(m.m01 / m.m00);
+      if ((cx < 0) || (cx >= plane.topView.cols) ||
+          (cy < 0) || (cy >= plane.topView.rows)) {
+        contours.erase(contours.begin() + i);
+        i--;
+        continue;
+      }
 
       // Fill counter if hollow and below max area size. If not hollow
       // and below min area size, discard it. Else, add as traversable
