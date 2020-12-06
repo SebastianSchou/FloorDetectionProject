@@ -53,6 +53,11 @@ double squareNorm(const cv::Mat& v)
   return vectorLength;
 }
 
+double roundToNearestValue(const double v, const double value)
+{
+  return std::floor(v * (1.0 / value)) * value;
+}
+
 Incrementer::Incrementer(const float min, const float max, const float step)
 {
   min_ = min;

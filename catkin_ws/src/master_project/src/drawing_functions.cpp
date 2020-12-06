@@ -130,7 +130,7 @@ void DrawingFunctions::drawPlanesInQuadtree(cv::Mat   & image,
 {
   int scale = cameraData.filterVariables.decimationScaleFactor;
 
-  if (node.isPlane && node.color != cv::Scalar::all(0)) {
+  if (node.isPlane && (node.color != cv::Scalar::all(0))) {
     cv::Mat rect(image.rows, image.cols, CV_8UC3, cv::Scalar::all(0));
 
 
@@ -248,6 +248,21 @@ cv::Mat DrawingFunctions::drawTopView(const CameraData        & cameraData,
       if (plane.restrictedAreas.size() != 0) {
         cv::drawContours(im, plane.restrictedAreas, -1, cv::Scalar::all(0),
                          cv::FILLED);
+      }
+      if (plane.type == PLANE_TYPE_FLOOR) {
+        for (const auto& heightArea : plane.heightLimitedAreas) {
+          for (size_t i = 0; i < heightArea.second.size(); i++) {
+            cv::drawContours(im, heightArea.second, i, cv::Scalar::all(125),
+                             cv::FILLED);
+            auto m = cv::moments(heightArea.second[i]);
+            cv::Point center(int(m.m10 / m.m00), int(m.m01 / m.m00));
+            center.y += 3;
+            center.x -= 5;
+            int h = heightArea.first * 100;
+            cv::putText(im, std::to_string(h), center,
+                        cv::FONT_HERSHEY_PLAIN, 0.5, cv::Scalar::all(0));
+          }
+        }
       }
     } else {
       im.setTo(plane.color, plane.topView);

@@ -356,16 +356,18 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
           nonPlanePoints.image2dPoints.at<uchar>(r, c) = 255;
           nonPlanePoints.insert3dPoint(point, mutexObjects);
           PlaneAnalysis::convert2dTo3d(point, nonPlanePoints, false);
-          if (-point[Y] < minObjectHeight + MIN_ROBOT_HEIGHT) {
-            const cv::Vec2i coord =
-              PlaneAnalysis::getTopViewCoordinates(point);
-            int margin = 4;
-            cv::Point p1(coord[0] - margin, coord[1] - margin);
-            cv::Point p2(coord[0] + margin, coord[1] - margin);
-            cv::Point p3(coord[0] - margin, coord[1] + margin);
-            cv::Point p4(coord[0] + margin, coord[1] + margin);
-            std::vector<cv::Point> area {p1, p2, p3, p4 };
+          const cv::Vec2i coord = PlaneAnalysis::getTopViewCoordinates(point);
+          int margin = 4;
+          cv::Point p1(coord[0] - margin, coord[1] - margin);
+          cv::Point p2(coord[0] + margin, coord[1] - margin);
+          cv::Point p3(coord[0] + margin, coord[1] + margin);
+          cv::Point p4(coord[0] - margin, coord[1] + margin);
+          std::vector<cv::Point> area {p1, p2, p3, p4 };
+          if (-point[Y] < minObjectHeight + MIN_ROBOT_HEIGHT + HEIGHT_DELTA) {
             nonPlanePoints.insertRestrictedArea(area, mutexObjects);
+          } else {
+            nonPlanePoints.insertHeightLimitedArea(-point[Y] - minObjectHeight,
+                                                   area, mutexObjects);
           }
         }
       }
@@ -477,6 +479,109 @@ void PlaneAnalysis::convert2dTo3d(const cv::Vec3d& p, Plane& plane,
   cv::rectangle(plane.topView, p1, p2, cv::Scalar(255), cv::FILLED);
 }
 
+bool PlaneAnalysis::isObjectOnFloor(const Plane& floor, const cv::Point& object)
+{
+  for (const auto& area : floor.traversableAreas) {
+    if (cv::pointPolygonTest(area, object, false) < 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void PlaneAnalysis::cleanUpHeightLimitedAreas(Plane& nonPlanePoints,
+                                              Plane& floor)
+{
+  // Use a pointer to the height limited areas for better readability
+  std::map<double, std::vector<std::vector<cv::Point> > > *areas =
+    &nonPlanePoints.heightLimitedAreas;
+
+  // Loop over all possible object heights
+  double minHeight = areas->begin()->first;
+  double maxHeight = OBJECT_MAX_HEIGHT_ABOVE_FLOOR;
+  for (double hL = minHeight; hL < maxHeight; hL += HEIGHT_DELTA) {
+    // Due to step values for double, round to nearest HEIGHT_DELTA value
+    // to be able to access map
+    hL = roundToNearestValue(hL, HEIGHT_DELTA);
+
+    // Ignore non-existant map values and remove keys which has no values
+    if (areas->find(hL) == areas->end()) {
+      continue;
+    } else if (areas->at(hL).size() == 0) {
+      areas->erase(hL);
+      continue;
+    }
+
+    // Initialize image where correct areas will be drawn, such that they can
+    // be merged in the end
+    cv::Mat heightImage(nonPlanePoints.topView.size(), CV_8U,
+                        cv::Scalar::all(0));
+
+    // Loop over areas for this height (hL)
+    for (size_t i = 0; i < areas->at(hL).size(); i++) {
+      // Get area center. If area center is not above floor, remove it.
+      cv::Point center(
+        (areas->at(hL)[i][1].x + areas->at(hL)[i][0].x) / 2.0,
+        (areas->at(hL)[i][2].y + areas->at(hL)[i][1].y) / 2.0);
+      if (PlaneAnalysis::isObjectOnFloor(floor, center)) {
+        areas->at(hL).erase(areas->at(hL).begin() + i);
+        i--;
+        if (areas->at(hL).size() == 0) {
+          areas->erase(hL);
+          break;
+        }
+        continue;
+      }
+
+      // Draw area in image
+      cv::drawContours(heightImage, areas->at(hL), i, 255, cv::FILLED);
+
+      // Loop over all higher objects (hH)
+      for (double hH = hL + HEIGHT_DELTA; hH < maxHeight; hH += HEIGHT_DELTA) {
+        // Ignore non-existant map values and remove keys which has no values
+        hH = roundToNearestValue(hH, HEIGHT_DELTA);
+        if (areas->find(hH) == areas->end()) {
+          continue;
+        } else if (areas->at(hH).size() == 0) {
+          areas->erase(hH);
+          continue;
+        }
+
+        // Loop over areas for this height (hH)
+        for (size_t j = 0; j < areas->at(hH).size(); j++) {
+          // Get area center. If not above floor level, or if area of lower
+          // height (hL)'s center is within the area, delete the area
+          cv::Point centerH(
+            (areas->at(hH)[j][1].x + areas->at(hH)[j][0].x) / 2.0,
+            (areas->at(hH)[j][2].y + areas->at(hH)[j][1].y) / 2.0);
+          if (((center.x >= areas->at(hH)[j][0].x) &&
+               (center.x <= areas->at(hH)[j][1].x) &&
+               (center.y >= areas->at(hH)[j][1].y) &&
+               (center.y <= areas->at(hH)[j][2].y)) ||
+              PlaneAnalysis::isObjectOnFloor(floor, centerH)) {
+            areas->at(hH).erase(areas->at(hH).begin() + j);
+            j--;
+            if (areas->at(hH).size() == 0) {
+              areas->erase(hH);
+              break;
+            }
+            continue;
+          }
+        }
+      }
+
+      // Find the areas for the now merged areas in this height (hL)
+      std::vector<std::vector<cv::Point> > heightContours;
+      cv::findContours(heightImage, heightContours, cv::RETR_TREE,
+                       cv::CHAIN_APPROX_TC89_KCOS);
+      areas->at(hL) = heightContours;
+    }
+  }
+
+  // Set height limited areas for the floor
+  floor.heightLimitedAreas = *areas;
+}
+
 void PlaneAnalysis::computePlaneContour(std::vector<Plane>& planes,
                                         Plane             & nonPlanePoints)
 {
@@ -550,6 +655,14 @@ void PlaneAnalysis::computePlaneContour(std::vector<Plane>& planes,
           plane.traversableAreas.push_back(approx);
         }
       }
+    }
+  }
+
+  // Add height limited restrictions to the floor plane
+  for (Plane& plane : planes) {
+    if (plane.type == PLANE_TYPE_FLOOR) {
+      PlaneAnalysis::cleanUpHeightLimitedAreas(nonPlanePoints, plane);
+      break;
     }
   }
 }

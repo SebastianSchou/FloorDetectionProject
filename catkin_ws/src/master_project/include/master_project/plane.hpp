@@ -12,6 +12,7 @@
 #define TOP_VIEW_DELTA 0.03                                      // [m]
 #define TOP_VIEW_HEIGHT std::ceil(MAX_DISTANCE / TOP_VIEW_DELTA) // [pixels]
 #define TOP_VIEW_WIDTH std::ceil(MAX_DISTANCE / TOP_VIEW_DELTA)  // [pixels]
+#define HEIGHT_DELTA 0.1                                         // [m]
 
 enum PlaneType {
   PLANE_TYPE_OTHER,
@@ -149,6 +150,15 @@ public:
     restrictedAreas.push_back(area);
   }
 
+  void insertHeightLimitedArea(const double                  height,
+                               const std::vector<cv::Point>& area,
+                               std::mutex                  & mutex)
+  {
+    std::lock_guard<std::mutex> lock(mutex);
+    const double h = roundToNearestValue(height, HEIGHT_DELTA);
+    heightLimitedAreas[h].push_back(area);
+  }
+
   void setImagePoint(const cv::Vec2i& point)
   {
     cv::Point p1(point[1] - std::floor(POINT_DELTA / 2),
@@ -170,7 +180,7 @@ public:
   cv::Vec3d mean, position, normal;
   cv::Scalar color;
   std::vector<std::vector<cv::Point> > traversableAreas, restrictedAreas;
-  std::vector<std::pair<double, std::vector<cv::Point> > > heightLimitedAreas;
+  std::map<double, std::vector<std::vector<cv::Point> > > heightLimitedAreas;
   std::vector<std::vector<double> > validCoordinates;
   std::vector<std::vector<int> > validPixels;
   std::vector<Quadtree *> nodes;

@@ -12,6 +12,7 @@ cv::Mat normalizeVector(const cv::Mat& v);
 double  square(const double v);
 bool    isMatEqual(const cv::Mat m1, const cv::Mat m2);
 double  squareNorm(const cv::Mat& v);
+double  roundToNearestValue(const double v, const double value);
 
 class Incrementer {
 public:
