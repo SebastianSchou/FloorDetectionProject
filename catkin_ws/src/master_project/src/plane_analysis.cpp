@@ -350,7 +350,7 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
         bestFit->insert2dPoint(point2d, mutex);
       } else if (!skip && isObject) {
         // Check if point is relevant
-        if ((maxObjectHeight > -point[Y]) && (minObjectHeight < -point[Y]) &&
+        if ((maxObjectHeight > -point[Y]) &&
             !PlaneAnalysis::isFaultyObject(cameraData.data3d, point[Z], r, c)) {
           // Insert non-plane point
           nonPlanePoints.image2dPoints.at<uchar>(r, c) = 255;
