@@ -20,6 +20,8 @@ bool   hasSimilarDistance(const Plane& plane1, const Plane& plane2);
 double getDistanceDifference(const Plane& plane1, const Plane& plane2);
 bool   hasSimilarNormal(const Plane& plane1, const Plane& plane2);
 void   transferNodes(Plane& plane1, Plane& plane2);
+double getDistanceToNode(const cv::Mat& m, const Quadtree& node,
+											   const int r, const int c, const cv::Vec3d p);
 Plane  computePlanePoints(std::vector<Plane>& planes,
                           const CameraData  & cameraData,
                           const double        cameraHeight = 0.0);

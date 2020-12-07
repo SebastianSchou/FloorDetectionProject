@@ -21,7 +21,8 @@
 #define X 0
 #define Y 1
 #define Z 2
-#define MIN_CONTOUR_SIZE 3 // [points]
+#define MIN_CONTOUR_SIZE 3       // [points]
+#define MAX_DISTANCE_TO_NODE 5.0 // [m]
 
 bool PlaneAnalysis::isGround(const Plane& currentFloor, const Plane& plane,
                              const float cameraHeight)
@@ -213,6 +214,36 @@ void PlaneAnalysis::mergeSimilarPlanes(std::vector<Plane>& planes)
   }
 }
 
+double PlaneAnalysis::getDistanceToNode(const cv::Mat& m, const Quadtree& node,
+                                        const int r, const int c,
+                                        const cv::Vec3d p)
+{
+  cv::Vec3d nodeP;
+  if (r <= node.minBounds.y)
+    if (c <= node.minBounds.x)
+      nodeP = m.at<cv::Vec3d>(node.minBounds.y, node.minBounds.x);
+    else if (c > node.maxBounds.x)
+      nodeP = m.at<cv::Vec3d>(node.minBounds.y, node.maxBounds.x);
+    else
+      nodeP = m.at<cv::Vec3d>(node.minBounds.y, c);
+  else if (r > node.maxBounds.y)
+    if (c <= node.minBounds.x)
+      nodeP = m.at<cv::Vec3d>(node.maxBounds.y, node.minBounds.x);
+    else if (c > node.maxBounds.x)
+      nodeP = m.at<cv::Vec3d>(node.maxBounds.y, node.maxBounds.x);
+    else
+      nodeP = m.at<cv::Vec3d>(node.maxBounds.y, c);
+  else
+  if (c <= node.minBounds.x)
+    nodeP = m.at<cv::Vec3d>(r, node.minBounds.x);
+  else if (c > node.maxBounds.x)
+    nodeP = m.at<cv::Vec3d>(r, node.maxBounds.x);
+  else // inside node, should not happen
+    return 0.0;
+
+  return cv::norm(p - nodeP, cv::NORM_L2);
+}
+
 Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
                                         const CameraData  & cameraData,
                                         const double        cameraHeight)
@@ -289,22 +320,8 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
       Plane *bestFit;
       double minDistance = MAX_POINT_PLANE_DISTANCE,
       normalDiff = MAX_POINT_PLANE_NORMAL_DIFF;
-      bool skip = false, isObject = true;
+      bool isObject = true;
       for (Plane& plane : planes) {
-        // If the point already exists in a plane, skip this point.
-        // Despite having to loop over all nodes, this is generally
-        // faster.
-        for (Quadtree *node : plane.nodes) {
-          if (((node->minBounds.x <= c) && (node->minBounds.y <= r) &&
-               (node->maxBounds.x > c) && (node->maxBounds.y > r))) {
-            skip = true;
-            break;
-          }
-        }
-        if (skip) {
-          break;
-        }
-
         // Calculate distance from plane to point. If this is below max
         // distance and the previous best plane fit, change the point to
         // the current plane
@@ -313,6 +330,33 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
 
         if (dist < MAX_POINT_PLANE_DISTANCE) {
           isObject = false;
+
+          // If the point already exists in a plane, skip this point.
+          // Despite having to loop over all nodes, this is generally
+          // faster than performing the rest of the calculations. Get
+          // the distance to the closest node simulationously.
+          double distanceToNode = MAX_DISTANCE_TO_NODE;
+          for (Quadtree *node : plane.nodes) {
+            if (((node->minBounds.x <= c) && (node->minBounds.y <= r) &&
+                 (node->maxBounds.x > c) && (node->maxBounds.y > r))) {
+              return;
+            }
+            if (distanceToNode >= MAX_DISTANCE_TO_NODE) {
+              distanceToNode =
+                std::min(distanceToNode,
+                         PlaneAnalysis::getDistanceToNode(cameraData.data3d,
+                                                          *node, r, c, point));
+            }
+          }
+
+          // If distance to node is too big, skip this plane
+          if (distanceToNode >= MAX_DISTANCE_TO_NODE) {
+            continue;
+          }
+
+          // Add a scale. The further away a point is, the more precise does
+          // the points normal vector has to be
+          double scale = 1.0 - distanceToNode / MAX_DISTANCE_TO_NODE;
 
           // Calculate the difference between the plane normal and the two
           // found normals. If the largest difference is too large, ignore
@@ -327,7 +371,7 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
           cv::Vec3d diffNormalNW = plane.normal - normalNW;
           double diff = std::max(cv::norm(diffNormalSE, cv::NORM_L2),
                                  cv::norm(diffNormalNW, cv::NORM_L2));
-          if (diff < normalDiff) {
+          if (diff < normalDiff * scale) {
             minDistance = dist;
             normalDiff = diff;
             bestFit = &plane;
@@ -344,11 +388,11 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
 
       // Insert point in plane
       cv::Vec2i point2d(r, c);
-      if (!skip && (minDistance < MAX_POINT_PLANE_DISTANCE)) {
+      if ((minDistance < MAX_POINT_PLANE_DISTANCE)) {
         bestFit->setImagePoint(point2d);
         bestFit->insert3dPoint(point, mutex);
         bestFit->insert2dPoint(point2d, mutex);
-      } else if (!skip && isObject) {
+      } else if (isObject) {
         // Check if point is relevant
         if ((maxObjectHeight > -point[Y]) &&
             !PlaneAnalysis::isFaultyObject(cameraData.data3d, point[Z], r, c)) {
