@@ -271,3 +271,26 @@ cv::Mat DrawingFunctions::drawTopView(const CameraData        & cameraData,
   im.setTo(cv::Scalar::all(255), nonPlanePoints);
   return im;
 }
+
+cv::Mat DrawingFunctions::drawSideView(const CameraData& cameraData,
+                                       const Plane     & plane)
+{
+  cv::Mat im(cv::Size(SIDE_VIEW_WIDTH, SIDE_VIEW_SIZE), CV_8UC3,
+             cv::Scalar::all(0));
+  double meanHeight = cv::mean(cameraData.data3d, plane.image2dPoints)[1];
+  cameraData.data3d.forEach<cv::Vec3d>(
+    [&](cv::Vec3d& p, const int *position) {
+    const int r = position[0], c = position[1];
+    if (plane.image2dPoints.at<uchar>(r, c) > 0) {
+      int row = std::round(p[1] / SIDE_VIEW_DELTA) +
+                (SIDE_VIEW_HEIGHT / 2.0) / SIDE_VIEW_DELTA - meanHeight / SIDE_VIEW_DELTA;
+      int col = std::round(p[2] / SIDE_VIEW_DELTA);
+      int margin = 0;
+      cv::Point p1(col - margin, row - margin);
+      cv::Point p2(col + margin, row + margin);
+      cv::rectangle(im, p1, p2, cv::Scalar::all(255), cv::FILLED);
+    }
+  }
+    );
+  return im;
+}

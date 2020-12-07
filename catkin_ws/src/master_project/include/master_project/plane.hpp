@@ -9,10 +9,14 @@
 #define POINT_DELTA 2
 #define MIN_PLANE_SAMPLE_SIZE 500
 #define MIN_NODE_NEIGHBOR_SAMPLE_SUM 100
-#define TOP_VIEW_DELTA 0.03                                      // [m]
-#define TOP_VIEW_HEIGHT std::ceil(MAX_DISTANCE / TOP_VIEW_DELTA) // [pixels]
-#define TOP_VIEW_WIDTH std::ceil(MAX_DISTANCE / TOP_VIEW_DELTA)  // [pixels]
-#define HEIGHT_DELTA 0.1                                         // [m]
+#define TOP_VIEW_DELTA 0.03                                          // [m]
+#define SIDE_VIEW_DELTA 0.01                                         // [m]
+#define TOP_VIEW_HEIGHT std::ceil(MAX_DISTANCE / TOP_VIEW_DELTA)     // [pixels]
+#define TOP_VIEW_WIDTH std::ceil(MAX_DISTANCE / TOP_VIEW_DELTA)      // [pixels]
+#define SIDE_VIEW_WIDTH std::ceil(MAX_DISTANCE / SIDE_VIEW_DELTA)    // [pixels]
+#define SIDE_VIEW_HEIGHT 1.0                                         // [m]
+#define SIDE_VIEW_SIZE std::ceil(SIDE_VIEW_HEIGHT / SIDE_VIEW_DELTA) // [pixels]
+#define HEIGHT_DELTA 0.1                                             // [m]
 
 enum PlaneType {
   PLANE_TYPE_OTHER,

@@ -21,7 +21,7 @@ int loadPicture(int argc, char **argv, const std::string& filePath)
   }
 
   // Load image
-  CameraData cameraData;
+  CameraData  cameraData;
   std::string filename = filePath + picture;
   if (!cameraData.loadImage(filename)) {
     return EXIT_ERROR;
@@ -40,9 +40,8 @@ int loadPicture(int argc, char **argv, const std::string& filePath)
     // Shutdown
     ros::shutdown();
     return EXIT_SUCCESS;
-
   }
-  auto timePlanePoints = std::chrono::steady_clock::now();
+  auto  timePlanePoints = std::chrono::steady_clock::now();
   Plane nonPlanePoints = PlaneAnalysis::computePlanePoints(planes,
                                                            cameraData);
   PlaneAnalysis::computePlaneContour(planes, nonPlanePoints);
@@ -72,6 +71,14 @@ int loadPicture(int argc, char **argv, const std::string& filePath)
                                     cameraData);
   cv::Mat topView =
     DrawingFunctions::drawTopView(cameraData, planes, nonPlanePoints.topView);
+  cv::Mat sideView;
+  for (Plane& plane : planes) {
+    if (plane.type == PLANE_TYPE_FLOOR) {
+      sideView = DrawingFunctions::drawSideView(cameraData, plane);
+      cv::imshow("Side view", sideView);
+      break;
+    }
+  }
 
   // cv::Mat accumDrawing = DrawingFunctions::drawAccumulatorCellVotes(
   //  width, height, *houghPlaneTransform.accumulator);
