@@ -492,6 +492,10 @@ bool PlaneAnalysis::isObjectOnFloor(const Plane& floor, const cv::Point& object)
 void PlaneAnalysis::cleanUpHeightLimitedAreas(Plane& nonPlanePoints,
                                               Plane& floor)
 {
+  // Add timer which returns if this function is taking too long time
+  auto start = std::chrono::steady_clock::now();
+  int timeout = 100; // [ms]
+
   // Use a pointer to the height limited areas for better readability
   std::map<double, std::vector<std::vector<cv::Point> > > *areas =
     &nonPlanePoints.heightLimitedAreas;
@@ -500,6 +504,11 @@ void PlaneAnalysis::cleanUpHeightLimitedAreas(Plane& nonPlanePoints,
   double minHeight = areas->begin()->first;
   double maxHeight = OBJECT_MAX_HEIGHT_ABOVE_FLOOR;
   for (double hL = minHeight; hL < maxHeight; hL += HEIGHT_DELTA) {
+    if (msUntilNow(start) > timeout) {
+      ROS_ERROR("Function 'cleanUpHeightLimitedAreas' reached timeout %d ms. "
+                "Height limited areas are ignored.", timeout);
+      return;
+    }
     // Due to step values for double, round to nearest HEIGHT_DELTA value
     // to be able to access map
     hL = roundToNearestValue(hL, HEIGHT_DELTA);
@@ -549,6 +558,11 @@ void PlaneAnalysis::cleanUpHeightLimitedAreas(Plane& nonPlanePoints,
 
         // Loop over areas for this height (hH)
         for (size_t j = 0; j < areas->at(hH).size(); j++) {
+          if (msUntilNow(start) > timeout) {
+            ROS_ERROR("Function 'cleanUpHeightLimitedAreas' reached timeout %d ms. "
+                      "Height limited areas are ignored.", timeout);
+            return;
+          }
           // Get area center. If not above floor level, or if area of lower
           // height (hL)'s center is within the area, delete the area
           cv::Point centerH(
