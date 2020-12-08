@@ -1,4 +1,8 @@
 #include "master_project/plane_analysis.hpp"
+#include <master_project/Plane.h>
+#include <master_project/Area.h>
+#include <master_project/HeightArea.h>
+#include <master_project/Point.h>
 
 #define MAX_POINT_PLANE_DISTANCE 0.1   // [m]
 #define ACCEPTABLE_BEST_POINT_FIT 0.01 // [m]
@@ -538,7 +542,7 @@ void PlaneAnalysis::cleanUpHeightLimitedAreas(Plane& nonPlanePoints,
 {
   // Add timer which returns if this function is taking too long time
   auto start = std::chrono::steady_clock::now();
-  int timeout = 100; // [ms]
+  int  timeout = 100; // [ms]
 
   // Use a pointer to the height limited areas for better readability
   std::map<double, std::vector<std::vector<cv::Point> > > *areas =
@@ -553,6 +557,7 @@ void PlaneAnalysis::cleanUpHeightLimitedAreas(Plane& nonPlanePoints,
                 "Height limited areas are ignored.", timeout);
       return;
     }
+
     // Due to step values for double, round to nearest HEIGHT_DELTA value
     // to be able to access map
     hL = roundToNearestValue(hL, HEIGHT_DELTA);
@@ -604,9 +609,11 @@ void PlaneAnalysis::cleanUpHeightLimitedAreas(Plane& nonPlanePoints,
         for (size_t j = 0; j < areas->at(hH).size(); j++) {
           if (msUntilNow(start) > timeout) {
             ROS_ERROR("Function 'cleanUpHeightLimitedAreas' reached timeout %d ms. "
-                      "Height limited areas are ignored.", timeout);
+                      "Height limited areas are ignored.",
+                      timeout);
             return;
           }
+
           // Get area center. If not above floor level, or if area of lower
           // height (hL)'s center is within the area, delete the area
           cv::Point centerH(
@@ -766,5 +773,51 @@ void PlaneAnalysis::printPlaneInformation(const Plane& plane)
            node->normal[X], node->normal[Y], node->normal[Z],
            node->mean[X], node->mean[Y], node->mean[Z],
            node->mean.dot(node->normal));
+  }
+}
+
+void PlaneAnalysis::insertPlanePublisherInformation(
+  master_project::HoughPlaneTransform& msg, const std::vector<Plane>& planes)
+{
+  for (const Plane& plane : planes) {
+    master_project::Plane planeMsg;
+    planeMsg.id = plane.id;
+    planeMsg.type = PLANE_TYPE_STR[plane.type];
+    planeMsg.no_of_nodes = plane.nodes.size();
+    planeMsg.samples = plane.samples;
+    planeMsg.normal.x = plane.normal[0];
+    planeMsg.normal.y = plane.normal[1];
+    planeMsg.normal.z = plane.normal[2];
+    planeMsg.position.x = plane.position[0];
+    planeMsg.position.y = plane.position[1];
+    planeMsg.position.z = plane.position[2];
+    planeMsg.distance = plane.rho;
+    planeMsg.area = plane.area;
+    for (const std::vector<cv::Point>& area : plane.traversableAreas) {
+      master_project::Area areaMsg;
+      for (const cv::Point& point : area) {
+        master_project::Point pointMsg;
+        pointMsg.x = point.x;
+        pointMsg.y = point.y;
+        areaMsg.area.push_back(pointMsg);
+      }
+      planeMsg.traversable_areas.push_back(areaMsg);
+    }
+    for (const auto& heightArea : plane.heightLimitedAreas) {
+      master_project::HeightArea heightAreaMsg;
+      heightAreaMsg.height = heightArea.first;
+      for (const std::vector<cv::Point>& area: heightArea.second) {
+        master_project::Area areaMsg;
+        for (const cv::Point& point : area) {
+          master_project::Point pointMsg;
+          pointMsg.x = point.x;
+          pointMsg.y = point.y;
+          areaMsg.area.push_back(pointMsg);
+        }
+        heightAreaMsg.area.push_back(areaMsg);
+      }
+      planeMsg.height_limited_areas.push_back(heightAreaMsg);
+    }
+    msg.planes.push_back(planeMsg);
   }
 }

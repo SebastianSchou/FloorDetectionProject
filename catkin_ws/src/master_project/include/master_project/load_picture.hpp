@@ -1,99 +1,127 @@
 #include <stdio.h>
 #include <opencv4/opencv2/core/ocl.hpp>
 #include "master_project/camera_data.hpp"
+#include <master_project/LoadPictureSrv.h>
 
 #define EXIT_SUCCESS 0
 #define EXIT_ERROR -1
+#define QUEUE_SIZE 10
 
-int loadPicture(int argc, char **argv, const std::string& filePath)
+static ros::ServiceServer srvLoadPicture;
+static ros::Publisher     pubHoughPlaneTransform;
+static bool shutdownRos = false;
+static std::string path = "";
+
+static void planePubCallback(const std::string& file, const int waitTime)
 {
-  // Initialize ros
-  ros::init(argc, argv, "take_picture");
-  ros::NodeHandle nh;
-
-  std::string picture;
-  if (!nh.getParam("/file", picture)) {
-    ROS_ERROR("No file given.");
-    return EXIT_ERROR;
-  } else if (picture == "all") {
-    ROS_ERROR("Loading all images is currently not supported");
-    return EXIT_ERROR;
-  }
+  // Create publisher
+  master_project::HoughPlaneTransform msg;
+  msg.filename = file;
 
   // Load image
   CameraData  cameraData;
-  std::string filename = filePath + picture;
+  std::string filename = path + file;
   if (!cameraData.loadImage(filename)) {
-    return EXIT_ERROR;
+    msg.success = false;
+    pubHoughPlaneTransform.publish(msg);
+    return;
   }
 
   auto start = std::chrono::steady_clock::now();
 
   // Process planes
-  HoughPlaneTransform houghPlaneTransform(cameraData, true);
+  HoughPlaneTransform houghPlaneTransform(cameraData);
   std::vector<Plane>  planes = houghPlaneTransform.planes;
   if (planes.empty()) {
-    ROS_INFO("No planes found. Processing time: %.3f ms", msUntilNow(start));
-    cv::imshow("Realsense color normal", cameraData.normalColorImage);
-    cv::waitKey(0);
+    msg.computation_time = msUntilNow(start);
+  } else {
+    Plane nonPlanePoints = PlaneAnalysis::computePlanePoints(planes,
+                                                             cameraData);
+    PlaneAnalysis::computePlaneContour(planes, nonPlanePoints);
+    msg.computation_time = msUntilNow(start);
+    PlaneAnalysis::insertPlanePublisherInformation(msg, planes);
 
-    // Shutdown
-    ros::shutdown();
-    return EXIT_SUCCESS;
-  }
-  auto  timePlanePoints = std::chrono::steady_clock::now();
-  Plane nonPlanePoints = PlaneAnalysis::computePlanePoints(planes,
-                                                           cameraData);
-  PlaneAnalysis::computePlaneContour(planes, nonPlanePoints);
-  ROS_INFO("Processing time: %.3f ms. Computing plane points time: %.3f ms\n",
-           msUntilNow(start), msUntilNow(timePlanePoints));
-
-  // PlaneAnalysis::printPlanesInformation(planes);
-
-  // Draw
-  cv::Mat onlyQuadtree = cameraData.depthAlignedColorImage.clone();
-  cv::Mat cleanedPlanePoints = cameraData.depthAlignedColorImage.clone();
-  DrawingFunctions::assignColorToPlanes(planes);
-  DrawingFunctions::drawQuadtreeBorders(cameraData.colorizedDepthImage,
-                                        houghPlaneTransform.root);
-  DrawingFunctions::drawPlanesInQuadtree(onlyQuadtree,
-                                         houghPlaneTransform.root,
-                                         cameraData);
-  DrawingFunctions::drawOnlyPlaneQuadtreeBorders(cleanedPlanePoints,
-                                                 planes,
-                                                 cameraData);
-  DrawingFunctions::drawPlanes(cleanedPlanePoints, planes);
-  DrawingFunctions::drawPlanesInQuadtree(cameraData.depthAlignedColorImage,
-                                         houghPlaneTransform.root,
-                                         cameraData);
-  DrawingFunctions::drawPlanePoints(cameraData.depthAlignedColorImage,
-                                    planes,
-                                    cameraData);
-  cv::Mat topView =
-    DrawingFunctions::drawTopView(cameraData, planes, nonPlanePoints.topView);
-  cv::Mat sideView;
-  for (Plane& plane : planes) {
-    if (plane.type == PLANE_TYPE_FLOOR) {
-      sideView = DrawingFunctions::drawSideView(cameraData, plane);
-      cv::imshow("Side view", sideView);
-      break;
+    if (waitTime == 1) {
+      msg.success = true;
+      pubHoughPlaneTransform.publish(msg);
+      return;
     }
+
+    // Draw
+    cv::Mat onlyQuadtree = cameraData.depthAlignedColorImage.clone();
+    cv::Mat cleanedPlanePoints = cameraData.depthAlignedColorImage.clone();
+    DrawingFunctions::assignColorToPlanes(planes);
+    DrawingFunctions::drawQuadtreeBorders(cameraData.colorizedDepthImage,
+                                          houghPlaneTransform.root);
+    DrawingFunctions::drawPlanesInQuadtree(onlyQuadtree,
+                                           houghPlaneTransform.root,
+                                           cameraData);
+    DrawingFunctions::drawOnlyPlaneQuadtreeBorders(cleanedPlanePoints,
+                                                   planes,
+                                                   cameraData);
+    DrawingFunctions::drawPlanes(cleanedPlanePoints, planes);
+    DrawingFunctions::drawPlanesInQuadtree(cameraData.depthAlignedColorImage,
+                                           houghPlaneTransform.root,
+                                           cameraData);
+    DrawingFunctions::drawPlanePoints(cameraData.depthAlignedColorImage,
+                                      planes,
+                                      cameraData);
+    cv::Mat topView =
+      DrawingFunctions::drawTopView(cameraData, planes, nonPlanePoints.topView);
+    cv::Mat sideView;
+    for (Plane& plane : planes) {
+      if (plane.type == PLANE_TYPE_FLOOR) {
+        sideView = DrawingFunctions::drawSideView(cameraData, plane);
+        cv::imshow("Side view", sideView);
+        break;
+      }
+    }
+
+    // cv::Mat accumDrawing = DrawingFunctions::drawAccumulatorCellVotes(
+    //  width, height, *houghPlaneTransform.accumulator);
+
+    // Show data
+    // cv::imshow("Accumulator", accumDrawing);
+    cv::imshow("Top view", topView);
+    cv::imshow("Realsense non plane points", nonPlanePoints.image2dPoints);
+    cv::imshow("Realsense plane points cleaned", cleanedPlanePoints);
+    cv::imshow("Realsense plane quadtree", onlyQuadtree);
+    cv::imshow("Realsense plane points rough",
+               cameraData.depthAlignedColorImage);
+  }
+  msg.success = true;
+  pubHoughPlaneTransform.publish(msg);
+  cv::imshow("Realsense color normal", cameraData.normalColorImage);
+  cv::waitKey(waitTime);
+  cv::destroyAllWindows();
+}
+
+static bool loadPictureCallback(master_project::LoadPictureSrv::Request & req,
+                                master_project::LoadPictureSrv::Response& rsp)
+{
+  if (req.filename.empty()) {
+    shutdownRos = true;
+    rsp.accepted = false;
+    return true;
   }
 
-  // cv::Mat accumDrawing = DrawingFunctions::drawAccumulatorCellVotes(
-  //  width, height, *houghPlaneTransform.accumulator);
+  planePubCallback(req.filename, req.imageTime);
 
-  // Show data
-  // cv::imshow("Accumulator", accumDrawing);
-  cv::imshow("Top view", topView);
-  cv::imshow("Realsense non plane points", nonPlanePoints.image2dPoints);
-  cv::imshow("Realsense plane points cleaned", cleanedPlanePoints);
-  cv::imshow("Realsense plane quadtree", onlyQuadtree);
-  cv::imshow("Realsense plane points rough", cameraData.depthAlignedColorImage);
-  cv::imshow("Realsense color normal", cameraData.normalColorImage);
-  cv::waitKey(0);
+  rsp.accepted = true;
+  return true;
+}
 
-  // Shutdown
+int loadPicture(int argc, char **argv, const std::string& filePath)
+{
+  // Initialize ros
+  path = filePath;
+  ros::init(argc, argv, "load_picture");
+  ros::NodeHandle nh;
+  srvLoadPicture = nh.advertiseService("load_picture_srv", loadPictureCallback);
+  pubHoughPlaneTransform =
+    nh.advertise<master_project::HoughPlaneTransform>("hough_plane_transform",
+                                                      QUEUE_SIZE);
+  ros::spin();
   ros::shutdown();
   return EXIT_SUCCESS;
 }

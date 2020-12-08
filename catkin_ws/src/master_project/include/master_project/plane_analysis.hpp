@@ -5,6 +5,7 @@
 #define MAX_DISTANCE_DIFFERENCE 0.10             // [m]
 
 #include "master_project/plane.hpp"
+#include <master_project/HoughPlaneTransform.h>
 
 namespace PlaneAnalysis {
 void   removeSmallPlanes(std::vector<Plane>& planes);
@@ -21,7 +22,7 @@ double getDistanceDifference(const Plane& plane1, const Plane& plane2);
 bool   hasSimilarNormal(const Plane& plane1, const Plane& plane2);
 void   transferNodes(Plane& plane1, Plane& plane2);
 double getDistanceToNode(const cv::Mat& m, const Quadtree& node,
-											   const int r, const int c, const cv::Vec3d p);
+                         const int r, const int c, const cv::Vec3d p);
 Plane  computePlanePoints(std::vector<Plane>& planes,
                           const CameraData  & cameraData,
                           const double        cameraHeight = 0.0);
@@ -40,5 +41,7 @@ void      printPlanesInformation(const std::vector<Plane>& planes);
 void      printPlaneInformation(const Plane& plane);
 void      cleanUpHeightLimitedAreas(Plane& nonPlanePoints, Plane& floor);
 bool      isObjectOnFloor(const Plane& floor, const cv::Point& object);
+void      insertPlanePublisherInformation(
+  master_project::HoughPlaneTransform& msg, const std::vector<Plane>& planes);
 };
 #endif // PLANE_ANALYSIS_HPP
