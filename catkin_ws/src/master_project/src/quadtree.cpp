@@ -243,12 +243,6 @@ void Quadtree::initializeRoot(CameraData& cameraData)
         sat.satZZ.set(r, c, z * z);
         sat.satSamples.set(r, c, 1);
         sat.satGradient.set(r, c, sobel);
-
-        // Save valid points
-        std::vector<double> validCoordinate { x, y, z };
-        validCoordinates.push_back(validCoordinate);
-        std::vector<int> validPixel { r, c };
-        validPixels.push_back(validPixel);
       }
 
       // Calculate sum table for this point

@@ -36,7 +36,6 @@ public:
   Plane(void)
   {
     rootRepresentativeness = 0.0;
-    isShowing = true;
     samples = 0;
     type = PLANE_TYPE_OTHER;
     topView = cv::Mat(cv::Size(TOP_VIEW_WIDTH, TOP_VIEW_HEIGHT), CV_8U,
@@ -179,14 +178,11 @@ public:
 
   double theta, phi, rho, votes, rootRepresentativeness, thetaIndex, area;
   int phiIndex, rhoIndex, samples, id, type;
-  bool isShowing;
   cv::Mat image2dPoints, topView;
   cv::Vec3d mean, position, normal;
   cv::Scalar color;
   std::vector<std::vector<cv::Point> > traversableAreas, restrictedAreas;
   std::map<double, std::vector<std::vector<cv::Point> > > heightLimitedAreas;
-  std::vector<std::vector<double> > validCoordinates;
-  std::vector<std::vector<int> > validPixels;
   std::vector<Quadtree *> nodes;
   std::vector<cv::Vec3d> points3d;
   std::vector<cv::Vec2i> points2d;

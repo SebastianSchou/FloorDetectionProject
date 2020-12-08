@@ -41,8 +41,6 @@ public:
          sampleDensity, maxPhiAngle, rho, phi, theta;
   SummedAreaTable sat;
   std::vector<Quadtree *> planes, nonPlanes;
-  std::vector<std::vector<double> > validCoordinates;
-  std::vector<std::vector<int> > validPixels;
   bool isPlane;
 
 private:
