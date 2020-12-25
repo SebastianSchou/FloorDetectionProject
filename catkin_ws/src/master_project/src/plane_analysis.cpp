@@ -4,11 +4,12 @@
 #include <master_project/HeightArea.h>
 #include <master_project/Point.h>
 
+#define ANGLE_TO_NORMAL(X) std::sqrt(2 - 2 * cos(X * CV_PI / 180.0))
 #define MAX_POINT_PLANE_DISTANCE 0.1   // [m]
 #define ACCEPTABLE_BEST_POINT_FIT 0.01 // [m]
-#define MAX_POINT_PLANE_NORMAL_DIFF 0.3
-#define ACCEPTABLE_BEST_NORMAL_DIFF 0.1
-#define MAX_PLANE_NORMAL_DIFF 0.15
+#define MAX_POINT_PLANE_NORMAL_DIFF ANGLE_TO_NORMAL(10.0)
+#define ACCEPTABLE_BEST_NORMAL_DIFF ANGLE_TO_NORMAL(5.0)
+#define MAX_PLANE_NORMAL_DIFF ANGLE_TO_NORMAL(4.0)
 #define MAX_INCLINE_DEGREES 8.0                                 // [degrees]
 #define MAX_INCLINE_RADIANS MAX_INCLINE_DEGREES * CV_PI / 180.0 // [radians]
 #define MIN_FLOOR_DISTANCE 0.5                                  // [m]
@@ -360,7 +361,7 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
 
           // Add a scale. The further away a point is, the more precise does
           // the points normal vector has to be
-          double scale = 1.0 - distanceToNode / MAX_DISTANCE_TO_NODE;
+          double scale = 1.0 - 0.5 * distanceToNode / MAX_DISTANCE_TO_NODE;
 
           // Calculate the difference between the plane normal and the two
           // found normals. If the largest difference is too large, ignore
