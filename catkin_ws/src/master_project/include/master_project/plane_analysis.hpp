@@ -49,6 +49,7 @@ void      printPlaneInformation(const Plane& plane);
 void      cleanUpHeightLimitedAreas(Plane& nonPlanePoints, Plane& floor);
 bool      isObjectOnFloor(const Plane& floor, const cv::Point& object);
 void      insertPlanePublisherInformation(
-  master_project::HoughPlaneTransform& msg, const std::vector<Plane>& planes);
+  master_project::HoughPlaneTransform& msg, const std::vector<Plane>& planes,
+  const bool includeNodeInformation = false);
 };
 #endif // PLANE_ANALYSIS_HPP

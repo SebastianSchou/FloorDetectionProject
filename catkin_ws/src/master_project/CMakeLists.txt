@@ -54,6 +54,7 @@ add_message_files(
   Area.msg
   HeightArea.msg
   HoughPlaneTransform.msg
+  Node.msg
   Plane.msg
   Point.msg
 )

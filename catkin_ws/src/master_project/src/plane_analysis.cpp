@@ -1,5 +1,6 @@
 #include "master_project/plane_analysis.hpp"
 #include <master_project/Plane.h>
+#include <master_project/Node.h>
 #include <master_project/Area.h>
 #include <master_project/HeightArea.h>
 #include <master_project/Point.h>
@@ -895,13 +896,31 @@ void PlaneAnalysis::printPlaneInformation(const Plane& plane)
 }
 
 void PlaneAnalysis::insertPlanePublisherInformation(
-  master_project::HoughPlaneTransform& msg, const std::vector<Plane>& planes)
+  master_project::HoughPlaneTransform& msg, const std::vector<Plane>& planes,
+  const bool includeNodeInformation)
 {
   for (const Plane& plane : planes) {
     master_project::Plane planeMsg;
     planeMsg.id = plane.id;
     planeMsg.type = PLANE_TYPE_STR[plane.type];
     planeMsg.no_of_nodes = plane.nodes.size();
+    if (includeNodeInformation) {
+      for (Quadtree* node : plane.nodes) {
+        master_project::Node nodeMsg;
+        nodeMsg.id = node->id;
+        nodeMsg.samples = node->samples;
+        nodeMsg.normal.x = node->normal[0];
+        nodeMsg.normal.y = node->normal[1];
+        nodeMsg.normal.z = node->normal[2];
+        nodeMsg.position.x = node->mean[0];
+        nodeMsg.position.y = node->mean[1];
+        nodeMsg.position.z = node->mean[2];
+        nodeMsg.phi = node->phi;
+        nodeMsg.theta = node->theta;
+        nodeMsg.rho = node->rho;
+        planeMsg.nodes.push_back(nodeMsg);
+      }
+    }
     planeMsg.samples = plane.samples;
     planeMsg.normal.x = plane.normal[0];
     planeMsg.normal.y = plane.normal[1];
@@ -909,6 +928,8 @@ void PlaneAnalysis::insertPlanePublisherInformation(
     planeMsg.position.x = plane.position[0];
     planeMsg.position.y = plane.position[1];
     planeMsg.position.z = plane.position[2];
+    planeMsg.phi = plane.phi;
+    planeMsg.theta = plane.theta;
     planeMsg.distance = plane.rho;
     planeMsg.area = plane.area;
     for (const std::vector<cv::Point>& area : plane.traversableAreas) {
