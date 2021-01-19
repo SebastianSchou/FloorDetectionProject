@@ -49,6 +49,8 @@ public:
 
   void computePlaneParameters(std::vector<Plane>& planes)
   {
+    cv::Vec3d newNormal(0.0, 0.0, 0.0);
+    double    newRho = 0.0;
     // Get nodes representing the plane
     for (size_t i = 0; i < nodes.size(); i++) {
       Quadtree *node = nodes[i];
@@ -79,7 +81,6 @@ public:
               break;
             } else {
               plane.rootRepresentativeness -= node->rootRepresentativeness;
-              plane.mean -= node->mean.mul(1 / plane.nodes.size());
               plane.samples -= node->samples;
               plane.nodes.erase(j);
             }
@@ -89,11 +90,18 @@ public:
       if (skip) {
         continue;
       }
+      newNormal += node->normal;
+      newRho += node->rho;
       rootRepresentativeness += node->rootRepresentativeness;
-      mean += node->mean;
       samples += node->samples;
     }
-    mean /= (double)nodes.size();
+    if (samples > 0) {
+      normal = cv::normalize(newNormal / (float)nodes.size());
+      rho = newRho / (float)nodes.size();
+      position = normal * rho;
+      phi = std::acos(normal[2]);
+      theta = std::atan2(normal[1], normal[0]);
+    }
   }
 
   float leastSquareError(const Plane& plane, const Quadtree& node)
