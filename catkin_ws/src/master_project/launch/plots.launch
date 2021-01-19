@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="master_project" name="plots" type="plots.py" output="screen"></node>
+    <include file="$(find master_project)/launch/load_picture.launch"></include>
+</launch>

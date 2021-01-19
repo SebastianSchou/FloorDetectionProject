@@ -39,7 +39,7 @@ static void planePubCallback(const std::string& file, const int waitTime)
                                                              cameraData);
     PlaneAnalysis::computePlaneContour(planes, nonPlanePoints);
     msg.computation_time = msUntilNow(start);
-    PlaneAnalysis::insertPlanePublisherInformation(msg, planes);
+    PlaneAnalysis::insertPlanePublisherInformation(msg, planes, true);
 
     if (waitTime == 1) {
       msg.success = true;
