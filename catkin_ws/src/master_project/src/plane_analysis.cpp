@@ -24,11 +24,8 @@
 #define MIN_PLANE_AREA 0.5                                      // [m^2]
 #define MAX_PLANE_AREA_FILL 1.0                                 // [m^2]
 #define MAX_OBJECT_DISTANCE_DIFFERENCE 0.2                      // [m]
-#define X 0
-#define Y 1
-#define Z 2
-#define MIN_CONTOUR_SIZE 3       // [points]
-#define MAX_DISTANCE_TO_NODE 5.0 // [m]
+#define MIN_CONTOUR_SIZE 3                                      // [points]
+#define MAX_DISTANCE_TO_NODE 5.0                                // [m]
 
 bool PlaneAnalysis::isGround(const Plane& currentFloor, const Plane& plane,
                              const float cameraHeight)
@@ -162,20 +159,11 @@ double PlaneAnalysis::getDistanceDifference(const Plane& plane1,
 
 void PlaneAnalysis::transferNodes(Plane& plane1, Plane& plane2)
 {
+  // transfers nodes from one plane to another
   for (size_t i = 0; i < plane2.nodes.size(); i++) {
     Quadtree *node = plane2.nodes[i];
-    if (find(plane1.nodes.begin(), plane1.nodes.end(),
-             node) != plane1.nodes.end()) {
-      if (plane2.nodes.size() <= 1) {
-        return;
-      }
-      plane2.nodes.erase(plane2.nodes.begin() + i);
-      continue;
-    } else {
-      plane1.rootRepresentativeness += node->rootRepresentativeness;
-      plane1.mean += node->mean.mul(1 / plane1.nodes.size());
-      plane1.samples += node->samples;
-    }
+    plane1.rootRepresentativeness += node->rootRepresentativeness;
+    plane1.samples += node->samples;
   }
   std::move(plane2.nodes.begin(), plane2.nodes.end(),
             std::inserter(plane1.nodes, plane1.nodes.end()));
@@ -287,34 +275,38 @@ double PlaneAnalysis::getDistanceToNode(const cv::Mat& m, const Quadtree& node,
                                         const int r, const int c,
                                         const cv::Vec3d p)
 {
+  // Finds the shortest distance from the node to border of a node
   cv::Vec3d nodeP;
-  if (r <= node.minBounds.y)
+  if (r <= node.minBounds.y) {
     if (c <= node.minBounds.x)
       nodeP = m.at<cv::Vec3d>(node.minBounds.y, node.minBounds.x);
     else if (c > node.maxBounds.x)
       nodeP = m.at<cv::Vec3d>(node.minBounds.y, node.maxBounds.x);
     else
       nodeP = m.at<cv::Vec3d>(node.minBounds.y, c);
-  else if (r > node.maxBounds.y)
+  } else if (r > node.maxBounds.y) {
     if (c <= node.minBounds.x)
       nodeP = m.at<cv::Vec3d>(node.maxBounds.y, node.minBounds.x);
     else if (c > node.maxBounds.x)
       nodeP = m.at<cv::Vec3d>(node.maxBounds.y, node.maxBounds.x);
     else
       nodeP = m.at<cv::Vec3d>(node.maxBounds.y, c);
-  else
-  if (c <= node.minBounds.x)
-    nodeP = m.at<cv::Vec3d>(r, node.minBounds.x);
-  else if (c > node.maxBounds.x)
-    nodeP = m.at<cv::Vec3d>(r, node.maxBounds.x);
-  else // inside node, should not happen
-    return 0.0;
+  } else {
+    if (c <= node.minBounds.x)
+      nodeP = m.at<cv::Vec3d>(r, node.minBounds.x);
+    else if (c > node.maxBounds.x)
+      nodeP = m.at<cv::Vec3d>(r, node.maxBounds.x);
+    else // inside node, should not happen
+      return 0.0;
+  }
 
   return cv::norm(p - nodeP, cv::NORM_L2);
 }
 
 float PlaneAnalysis::getThetaDifference(const Plane& plane1, const Plane& plane2)
 {
+  // Theta goes from 0 to 2 PI, with 0 and 2 PI being the same. Therefore, if
+  // the difference is too large, it is subtracted from 2 PI
   float thetaDiff = std::abs(plane1.theta - plane2.theta);
   thetaDiff = thetaDiff > CV_PI ? 2 * CV_PI - thetaDiff : thetaDiff;
   return thetaDiff;
@@ -659,9 +651,9 @@ bool PlaneAnalysis::isObjectOnFloor(const Plane& floor, const cv::Point& object)
 void PlaneAnalysis::cleanUpHeightLimitedAreas(Plane& nonPlanePoints,
                                               Plane& floor)
 {
-  // Add timer which returns if this function is taking too long time
-  auto start = std::chrono::steady_clock::now();
-  int  timeout = 100; // [ms]
+  // Removes any height limitation which isn't within floor area, and if
+  // several limitations exist above each other, only showcase the lowest
+  // height limitation
 
   // Use a pointer to the height limited areas for better readability
   std::map<double, std::vector<std::vector<cv::Point> > > *areas =
@@ -671,12 +663,6 @@ void PlaneAnalysis::cleanUpHeightLimitedAreas(Plane& nonPlanePoints,
   double minHeight = areas->begin()->first;
   double maxHeight = OBJECT_MAX_HEIGHT_ABOVE_FLOOR;
   for (double hL = minHeight; hL < maxHeight; hL += HEIGHT_DELTA) {
-    if (msUntilNow(start) > timeout) {
-      ROS_ERROR("Function 'cleanUpHeightLimitedAreas' reached timeout %d ms. "
-                "Height limited areas are ignored.", timeout);
-      return;
-    }
-
     // Due to step values for double, round to nearest HEIGHT_DELTA value
     // to be able to access map
     hL = roundToNearestValue(hL, HEIGHT_DELTA);
@@ -726,13 +712,6 @@ void PlaneAnalysis::cleanUpHeightLimitedAreas(Plane& nonPlanePoints,
 
         // Loop over areas for this height (hH)
         for (size_t j = 0; j < areas->at(hH).size(); j++) {
-          if (msUntilNow(start) > timeout) {
-            ROS_ERROR("Function 'cleanUpHeightLimitedAreas' reached timeout %d ms. "
-                      "Height limited areas are ignored.",
-                      timeout);
-            return;
-          }
-
           // Get area center. If not above floor level, or if area of lower
           // height (hL)'s center is within the area, delete the area
           cv::Point centerH(
@@ -769,6 +748,8 @@ void PlaneAnalysis::cleanUpHeightLimitedAreas(Plane& nonPlanePoints,
 void PlaneAnalysis::computePlaneContour(std::vector<Plane>& planes,
                                         Plane             & nonPlanePoints)
 {
+  // Compute the contour of the floor planes to detect which areas are,
+  // traversable
   for (Plane& plane : planes) {
     if ((plane.type != PLANE_TYPE_FLOOR) &&
         (plane.type != PLANE_TYPE_OTHER)) {

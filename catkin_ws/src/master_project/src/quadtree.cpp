@@ -5,10 +5,6 @@
 // Assuming normal distribution, 95% of the value is within the
 // interval [-1.96, 1.96]
 #define CONFIDENCE_INTERVAL_95_PERCENTAGE 1.96
-#define X 0
-#define Y 1
-#define Z 2
-#define MIN_EIGENVALUE_INDEX 2
 #define MIN_SAMPLE_DENSITY 0.9 // [%]
 #define MAX_GRADIANT_SUM 60.0  // [m]
 #define ROWS_REMOVE 3

@@ -6,6 +6,10 @@
 
 #define MAX_DISTANCE 10.0  // [m]
 #define MIN_DISTANCE 0.195 // [m]
+#define X 0
+#define Y 1
+#define Z 2
+#define MIN_EIGENVALUE_INDEX 2
 
 class Quadtree {
 public:

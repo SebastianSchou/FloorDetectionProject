@@ -4,12 +4,6 @@
 #include "master_project/helper_function.hpp"
 #include "master_project/quadtree.hpp"
 
-#define X 0
-#define Y 1
-#define Z 2
-#define MIN_EIGENVALUE_INDEX 2
-#define NONZERO 0.00001
-
 class Kernel {
 public:
 

@@ -5,6 +5,8 @@
 #include <master_project/helper_function.hpp>
 #include <mutex>
 
+#define MAX_ANGLE_DIFFERENCE 4.0 * CV_PI / 180.0 // [radians]
+#define MAX_DISTANCE_DIFFERENCE 0.08             // [m]
 #define MIN_INDEPENDENT_NODE_SIZE 50
 #define POINT_DELTA 2
 #define MIN_PLANE_SAMPLE_SIZE 500
@@ -190,7 +192,7 @@ public:
          thetaStd, phiStd, rhoStd;
   int phiIndex, rhoIndex, samples, id, type;
   cv::Mat image2dPoints, topView;
-  cv::Vec3d mean, position, normal;
+  cv::Vec3d position, normal;
   cv::Scalar color;
   std::vector<std::vector<cv::Point> > traversableAreas, restrictedAreas;
   std::map<double, std::vector<std::vector<cv::Point> > > heightLimitedAreas;

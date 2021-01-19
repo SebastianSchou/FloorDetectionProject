@@ -19,10 +19,9 @@ public:
     float timeInitializeQuadtree = msUntilNow(start);
     root.divideIntoQuadrants();
     float timeQuadtree = msUntilNow(start) - timeInitializeQuadtree;
-    float rhoDelta = 0.08;             // [m]
-    float phiDelta = 4.0 * CV_PI / 180.0; // [radians]
     accumulator = new Accumulator(root.maxPlaneDistance, root.maxPhiAngle,
-                                  rhoDelta, phiDelta);
+                                  MAX_DISTANCE_DIFFERENCE,
+                                  MAX_ANGLE_DIFFERENCE);
     voting(root, *accumulator, usedBins, usedKernels);
     float timeVoting = msUntilNow(start) - timeQuadtree -
                        timeInitializeQuadtree;

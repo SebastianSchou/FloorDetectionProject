@@ -6,6 +6,7 @@
 
 const double PI2 = 2.0 * CV_PI;
 static const double SQRTOFCUBIC2PI = 2.0 * sqrt(2.0) * pow(CV_PI, 1.5);
+const double NONZERO = 0.00001;
 
 float   msUntilNow(const std::chrono::steady_clock::time_point& start);
 cv::Mat normalizeVector(const cv::Mat& v);

@@ -1,9 +1,6 @@
 #ifndef PLANE_ANALYSIS_HPP
 #define PLANE_ANALYSIS_HPP
 
-#define MAX_ANGLE_DIFFERENCE 5.0 * CV_PI / 180.0 // [radians]
-#define MAX_DISTANCE_DIFFERENCE 0.10             // [m]
-
 #include "master_project/plane.hpp"
 #include <master_project/HoughPlaneTransform.h>
 
