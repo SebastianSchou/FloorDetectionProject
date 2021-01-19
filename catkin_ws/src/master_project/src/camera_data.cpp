@@ -33,11 +33,6 @@ bool CameraData::initializeCamera()
                        IMAGE_HEIGHT,
                        RS2_FORMAT_Z16,
                        FRAMES_PER_SECOND);
-  config.enable_stream(RS2_STREAM_INFRARED,
-                       IMAGE_WIDTH,
-                       IMAGE_HEIGHT,
-                       RS2_FORMAT_Y8,
-                       FRAMES_PER_SECOND);
   try {
     profile = pipe.start(config);
   } catch (rs2::error errorMsg) {
@@ -135,7 +130,6 @@ bool CameraData::processFrames()
   depthFrameFiltered = temporalFilter.process(depthFrameFiltered);
   rs2::video_frame depthColor = colorMap.colorize(depthFrameFiltered);
   rs2::video_frame color = frames.get_color_frame();
-  rs2::video_frame ir = frames.first(RS2_STREAM_INFRARED);
 
   // Get decimated depth image size
   width = (int)depthFrameFiltered.get_width();
@@ -159,16 +153,6 @@ bool CameraData::processFrames()
                                 CV_8UC3,
                                 (void *)depthColor.get_data(),
                                 cv::Mat::AUTO_STEP);
-
-  // IR image
-  irImage = cv::Mat(cv::Size(IMAGE_WIDTH, IMAGE_HEIGHT),
-                    CV_8UC1,
-                    (void *)ir.get_data(),
-                    cv::Mat::AUTO_STEP);;
-
-  // Equalize IR frame
-  cv::equalizeHist(irImage, irImage);
-  cv::applyColorMap(irImage, irImage, cv::COLORMAP_JET);
 
   // Get depth data as a matrix
   cv::Mat depthDataTemp = cv::Mat(cv::Size(width, height), CV_16UC1,

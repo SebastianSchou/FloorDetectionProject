@@ -36,7 +36,7 @@ public:
   int width, height;
   double fx, fy, ppx, ppy;
   cv::Mat normalColorImage, colorizedDepthImage, depthAlignedColorImage,
-          irImage, depthData, data3d;
+          depthData, data3d;
   FilterVariables filterVariables;
 
 private:
