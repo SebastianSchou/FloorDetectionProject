@@ -86,22 +86,8 @@ inline void peakDetection(std::vector<Plane> & planes,
     plane.phiIndex = cell->phiIndex;
     plane.rhoIndex = cell->rhoIndex;
     plane.id = planeId++;
-    bool skip = false;
-
-    // Merge similar planes
-    for (Plane& prevPlane : planes) {
-      if (PlaneAnalysis::hasSimilarNormal(prevPlane, plane) &&
-          PlaneAnalysis::hasSimilarDistance(prevPlane, plane)) {
-        PlaneAnalysis::transferNodes(prevPlane, plane);
-        skip = true;
-        break;
-      }
-    }
-    if (skip) {
-      continue;
-    }
     plane.computePlaneParameters(planes);
-    if (plane.samples > MIN_PLANE_SAMPLE_SIZE) {
+    if (plane.samples > 0) {
       planes.push_back(plane);
     }
   }

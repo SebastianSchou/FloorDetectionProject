@@ -130,6 +130,12 @@ bool PlaneAnalysis::hasSimilarNormal(const Plane& plane1, const Plane& plane2)
                   cv::NORM_L2) < MAX_PLANE_NORMAL_DIFF;
 }
 
+bool PlaneAnalysis::hasSimilarNormal(const Plane& plane, const Quadtree& node)
+{
+  return cv::norm(plane.normal - node.normal,
+                  cv::NORM_L2) < MAX_PLANE_NORMAL_DIFF;
+}
+
 double PlaneAnalysis::getAngleDifference(const Plane& plane1,
                                          const Plane& plane2)
 {
@@ -139,7 +145,12 @@ double PlaneAnalysis::getAngleDifference(const Plane& plane1,
 
 bool PlaneAnalysis::hasSimilarDistance(const Plane& plane1, const Plane& plane2)
 {
-  return std::abs(plane1.rho - plane2.rho) < MAX_DISTANCE_DIFFERENCE;
+  return std::abs(plane1.rho - plane2.rho) < 2 * MAX_DISTANCE_DIFFERENCE;
+}
+
+bool PlaneAnalysis::hasSimilarDistance(const Plane& plane, const Quadtree& node)
+{
+  return std::abs(plane.rho - node.rho) < 2 * MAX_DISTANCE_DIFFERENCE;
 }
 
 double PlaneAnalysis::getDistanceDifference(const Plane& plane1,
@@ -169,51 +180,103 @@ void PlaneAnalysis::transferNodes(Plane& plane1, Plane& plane2)
             std::inserter(plane1.nodes, plane1.nodes.end()));
 }
 
-void PlaneAnalysis::calculateNewNormal(Plane& plane)
+void PlaneAnalysis::calculateNormalAndStandardDeviation(
+  Plane& plane, std::vector<Quadtree*>& unfitNodes)
 {
+  // Calculates new normal for plane defined by the nodes it contains.
+  // Also calculates standard deviation for theta, phi, and rho, as well
+  // as removing nodes which does not fit properly in the plane
   cv::Vec3d normal(0.0, 0.0, 0.0);
   double    rho = 0.0;
   for (const Quadtree *node : plane.nodes) {
     normal += node->normal;
     rho += node->rho;
   }
+
+  // Calculate normal, rho, position, phi and theta
   plane.normal = cv::normalize(normal / (float)plane.nodes.size());
   plane.rho = rho / (float)plane.nodes.size();
   plane.position = plane.normal * plane.rho;
   plane.phi = std::acos(plane.normal[Z]);
   plane.theta = std::atan2(plane.normal[Y], plane.normal[X]);
+
+  // Calculate standard deviations and remove unfit nodes
+  double thetaStd = 0.0, phiStd = 0.0, rhoStd = 0.0;
+  for (size_t i = 0; i < plane.nodes.size(); i++) {
+    Quadtree *node = plane.nodes[i];
+    bool hasLowLsqe = PlaneAnalysis::leastSquareError(plane, *node) < 1.5;
+    float phiDiff = std::abs(node->phi - plane.phi);
+    float thetaDiff = PlaneAnalysis::getThetaDifference(plane, *node);
+    if (!hasLowLsqe ||
+        (phiDiff > 2 * MAX_ANGLE_DIFFERENCE &&
+         thetaDiff > 2 * MAX_ANGLE_DIFFERENCE)) {
+      unfitNodes.push_back(node);
+      plane.nodes.erase(plane.nodes.begin() + i);
+      i--;
+      plane.samples -= node->samples;
+      plane.rootRepresentativeness -= node->rootRepresentativeness;
+      continue;
+    }
+    thetaStd += square(thetaDiff);
+    phiStd += square(phiDiff);
+    rhoStd += square(node->rho - plane.rho);
+  }
+  plane.thetaStd = std::sqrt(thetaStd / plane.nodes.size());
+  plane.phiStd = std::sqrt(phiStd / plane.nodes.size());
+  plane.rhoStd = std::sqrt(rhoStd / plane.nodes.size());
+
+  // Remove nodes which does not fit within two standard deviations
+  for (size_t i = 0; i < plane.nodes.size(); i++) {
+    Quadtree *node = plane.nodes[i];
+    if (!PlaneAnalysis::isWithinTwoStandardDeviations(plane, *node)) {
+      unfitNodes.push_back(node);
+      plane.nodes.erase(plane.nodes.begin() + i);
+      i--;
+      plane.samples -= node->samples;
+      plane.rootRepresentativeness -= node->rootRepresentativeness;
+      continue;
+    }
+  }
 }
 
 float PlaneAnalysis::leastSquareError(const Plane& plane, const Quadtree& node)
 {
-  return square(plane.rho - node.rho) + square(plane.phi - node.phi) +
-         square(std::abs(plane.theta) - std::abs(node.theta));
+  return square(plane.normal[X] - node.normal[X]) +
+         square(plane.normal[Y] - node.normal[Y]) +
+         square(plane.normal[Z] - node.normal[Z]) +
+         square(10.0 * (plane.rho - node.rho));
 }
 
-void PlaneAnalysis::mergeSimilarPlanes(std::vector<Plane>& planes)
+bool PlaneAnalysis::isWithinTwoStandardDeviations(const Plane& plane1,
+                                                  const Plane& plane2)
+{
+  return (std::abs(plane1.rho - plane2.rho) < 2 * plane1.rhoStd &&
+          std::abs(plane1.phi - plane2.phi) < 2 * plane1.phiStd &&
+          PlaneAnalysis::getThetaDifference(plane1, plane2) < 2 * plane1.thetaStd);
+}
+
+bool PlaneAnalysis::isWithinTwoStandardDeviations(const Plane& plane, const Quadtree& node)
+{
+  return (std::abs(plane.rho - node.rho) < 2 * plane.rhoStd &&
+          std::abs(plane.phi - node.phi) < 2 * plane.phiStd &&
+          PlaneAnalysis::getThetaDifference(plane, node) < 2 * plane.thetaStd);
+}
+
+void PlaneAnalysis::mergeSimilarPlanes(std::vector<Plane>& planes, std::vector<Quadtree*>& unfitNodes)
 {
   for (size_t i = 0; i < planes.size() - 1; i++) {
     for (size_t j = i + 1; j < planes.size(); j++) {
-      if (PlaneAnalysis::hasSimilarNormal(planes[i], planes[j]) &&
-          PlaneAnalysis::hasSimilarDistance(planes[i], planes[j])) {
+      // If the planes parameters are similar, merge the planes and calculate
+      // a new normal
+      if (PlaneAnalysis::isWithinTwoStandardDeviations(planes[i], planes[j]) ||
+          PlaneAnalysis::isWithinTwoStandardDeviations(planes[j], planes[i]) ||
+          (PlaneAnalysis::hasSimilarNormal(planes[i], planes[j]) &&
+           PlaneAnalysis::hasSimilarDistance(planes[i], planes[j]))) {
         PlaneAnalysis::transferNodes(planes[i], planes[j]);
         planes.erase(planes.begin() + j);
         j--;
+        PlaneAnalysis::calculateNormalAndStandardDeviation(planes[i], unfitNodes);
         break;
-      }
-      for (size_t k = 0; k < planes[j].nodes.size(); k++) {
-        Quadtree *node = planes[j].nodes[k];
-        if (PlaneAnalysis::leastSquareError(planes[i], *node) <
-            PlaneAnalysis::leastSquareError(planes[j], *node)) {
-          planes[i].rootRepresentativeness += node->rootRepresentativeness;
-          planes[j].rootRepresentativeness -= node->rootRepresentativeness;
-          planes[i].samples += node->samples;
-          planes[j].samples -= node->samples;
-          planes[i].nodes.push_back(node);
-          planes[j].nodes.erase(planes[j].nodes.begin() + k);
-          k--;
-          break;
-        }
       }
     }
   }
@@ -249,6 +312,53 @@ double PlaneAnalysis::getDistanceToNode(const cv::Mat& m, const Quadtree& node,
   return cv::norm(p - nodeP, cv::NORM_L2);
 }
 
+float PlaneAnalysis::getThetaDifference(const Plane& plane1, const Plane& plane2)
+{
+  float thetaDiff = std::abs(plane1.theta - plane2.theta);
+  thetaDiff = thetaDiff > CV_PI ? 2 * CV_PI - thetaDiff : thetaDiff;
+  return thetaDiff;
+}
+
+float PlaneAnalysis::getThetaDifference(const Plane& plane, const Quadtree& node)
+{
+  float thetaDiff = std::abs(plane.theta - node.theta);
+  thetaDiff = thetaDiff > CV_PI ? 2 * CV_PI - thetaDiff : thetaDiff;
+  return thetaDiff;
+}
+
+void PlaneAnalysis::matchUnfitNodes(std::vector<Plane>& planes,
+                                    std::vector<Quadtree*>& unfitNodes)
+{
+  // For each unfit node, compare it to each plane, and the plane with the
+  // smallest least square error gets the node. Other requirements to get the
+  // node is:
+  //  - Is non-zero (disqualifies planes which most likely are tailored to the
+  //    node)
+  //  - Is within two standard deviations or has similar normal and distance
+  //  - If lsqe is small enough, append it plane even if above requirement is
+  //    not met
+  for (Quadtree* node : unfitNodes) {
+    Plane* bestFit;
+    float bestValue = 1.0;
+    for (Plane& plane : planes) {
+      float lsqe = PlaneAnalysis::leastSquareError(plane, *node);
+      if  (lsqe > 0.0001 && lsqe < bestValue &&
+           (lsqe < 0.05 ||
+            (PlaneAnalysis::isWithinTwoStandardDeviations(plane, *node) ||
+             (PlaneAnalysis::hasSimilarNormal(plane, *node) &&
+              PlaneAnalysis::hasSimilarDistance(plane, *node))))) {
+        bestFit = &plane;
+        bestValue = lsqe;
+      }
+    }
+    if (bestValue < 1.0) {
+      bestFit->nodes.push_back(node);
+      bestFit->samples += node->samples;
+      bestFit->rootRepresentativeness += node->rootRepresentativeness;
+    }
+  }
+}
+
 Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
                                         const CameraData  & cameraData,
                                         const double        cameraHeight)
@@ -266,14 +376,21 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
             cv::Scalar::all(0));
 
   // Initialize planes
+  std::vector<Quadtree*> unfitNodes;
   for (Plane& plane : planes) {
     plane.image2dPoints = cv::Mat(cv::Size(cameraData.width, cameraData.height),
                                   CV_8U, cv::Scalar::all(0));
-    PlaneAnalysis::calculateNewNormal(plane);
+    PlaneAnalysis::calculateNormalAndStandardDeviation(plane, unfitNodes);
   }
 
   // Merge similar planes
-  PlaneAnalysis::mergeSimilarPlanes(planes);
+  PlaneAnalysis::mergeSimilarPlanes(planes, unfitNodes);
+
+  // Match unfit nodes
+  PlaneAnalysis::matchUnfitNodes(planes, unfitNodes);
+
+  // Remove planes which has too few samples
+  PlaneAnalysis::removeSmallPlanes(planes);
 
   // Assign type to planes
   PlaneAnalysis::assignPlaneType(planes, cameraHeight);

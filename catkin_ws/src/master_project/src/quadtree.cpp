@@ -30,7 +30,7 @@ Quadtree::Quadtree()
   id = 0;
   idNo = 0;
   setMinSamplesInNode(25);
-  setMaxPlaneThickness(0.45);
+  setMaxPlaneThickness(0.40);
 }
 
 Quadtree::~Quadtree()

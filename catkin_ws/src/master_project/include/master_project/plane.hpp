@@ -106,8 +106,10 @@ public:
 
   float leastSquareError(const Plane& plane, const Quadtree& node)
   {
-    return square(plane.rho - node.rho) + square(plane.phi - node.phi) +
-           square(std::abs(plane.theta) - std::abs(node.theta));
+    return square(plane.normal[0] - node.normal[0]) +
+           square(plane.normal[1] - node.normal[1]) +
+           square(plane.normal[2] - node.normal[2]) +
+           square(10 * (plane.rho - node.rho));
   }
 
   bool hasNeighbor(Quadtree *loneNode)
@@ -184,7 +186,8 @@ public:
     cv::rectangle(image2dPoints, p1, p2, cv::Scalar::all(255), cv::FILLED);
   }
 
-  double theta, phi, rho, votes, rootRepresentativeness, thetaIndex, area;
+  double theta, phi, rho, votes, rootRepresentativeness, thetaIndex, area,
+         thetaStd, phiStd, rhoStd;
   int phiIndex, rhoIndex, samples, id, type;
   cv::Mat image2dPoints, topView;
   cv::Vec3d mean, position, normal;

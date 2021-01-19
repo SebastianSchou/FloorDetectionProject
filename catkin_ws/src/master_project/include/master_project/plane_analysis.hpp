@@ -18,8 +18,10 @@ void   assignPlaneType(std::vector<Plane>& planes,
                        const float         cameraHeight = 0.0);
 double getAngleDifference(const Plane& plane1, const Plane& plane2);
 bool   hasSimilarDistance(const Plane& plane1, const Plane& plane2);
+bool   hasSimilarDistance(const Plane& plane, const Quadtree& node);
 double getDistanceDifference(const Plane& plane1, const Plane& plane2);
 bool   hasSimilarNormal(const Plane& plane1, const Plane& plane2);
+bool   hasSimilarNormal(const Plane& plane, const Quadtree& node);
 void   transferNodes(Plane& plane1, Plane& plane2);
 double getDistanceToNode(const cv::Mat& m, const Quadtree& node,
                          const int r, const int c, const cv::Vec3d p);
@@ -32,8 +34,13 @@ bool   isFaultyObject(const cv::Mat& m,
                       const int      c);
 cv::Vec2i getTopViewCoordinates(const cv::Vec3d& p);
 void      convert2dTo3d(const cv::Vec3d& p, Plane& plane, const bool addMargin);
-void      calculateNewNormal(Plane& plane);
-void      mergeSimilarPlanes(std::vector<Plane>& planes);
+void      calculateNormalAndStandardDeviation(Plane& plane, std::vector<Quadtree*>& unfitNodes);
+bool      isWithinTwoStandardDeviations(const Plane& plane1, const Plane& plane2);
+bool      isWithinTwoStandardDeviations(const Plane& plane, const Quadtree& node);
+float     getThetaDifference(const Plane& plane1, const Plane& plane2);
+float     getThetaDifference(const Plane& plane, const Quadtree& node);
+void      mergeSimilarPlanes(std::vector<Plane>& planes, std::vector<Quadtree*>& unfitNodes);
+void      matchUnfitNodes(std::vector<Plane>& planes, std::vector<Quadtree*>& unfitNodes);
 void      computePlaneContour(std::vector<Plane>& planes,
                               Plane             & nonPlanePoints);
 float     leastSquareError(const Plane& plane, const Quadtree& node);
