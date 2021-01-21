@@ -255,10 +255,13 @@ cv::Mat DrawingFunctions::drawTopView(const CameraData        & cameraData,
       if (plane.type == PLANE_TYPE_FLOOR) {
         for (const auto& heightArea : plane.heightLimitedAreas) {
           for (size_t i = 0; i < heightArea.second.size(); i++) {
-            cv::drawContours(im, heightArea.second, i, cv::Scalar::all(125),
+            cv::Point center = heightArea.second[i];
+            std::vector<std::vector<cv::Point>> area =
+              {{center + cv::Point(-4, -4), center + cv::Point(4, -4),
+                center + cv::Point(4, 4), center + cv::Point(-4, 4)}};
+
+            cv::drawContours(im, area, 0, cv::Scalar::all(125),
                              cv::FILLED);
-            auto m = cv::moments(heightArea.second[i]);
-            cv::Point center(int(m.m10 / m.m00), int(m.m01 / m.m00));
             center.y += 3;
             center.x -= 5;
             int h = heightArea.first * 100;
