@@ -628,6 +628,13 @@ cv::Vec2i PlaneAnalysis::getTopViewCoordinates(const cv::Vec3d& p)
   return cv::Vec2i(col, row);
 }
 
+cv::Vec2d PlaneAnalysis::convertTopViewToMeters(const cv::Point& p)
+{
+  double x = (p.x - MAX_DISTANCE / TOP_VIEW_DELTA / 2.0) * TOP_VIEW_DELTA;
+  double y = (TOP_VIEW_HEIGHT - p.y) * TOP_VIEW_DELTA;
+  return cv::Vec2d(x, y);
+}
+
 void PlaneAnalysis::convert2dTo3d(const cv::Vec3d& p, Plane& plane)
 {
   const cv::Vec2i coord = PlaneAnalysis::getTopViewCoordinates(p);
@@ -899,9 +906,10 @@ void PlaneAnalysis::insertPlanePublisherInformation(
     for (const std::vector<cv::Point>& area : plane.traversableAreas) {
       master_project::Area areaMsg;
       for (const cv::Point& point : area) {
+        cv::Vec2d coord = PlaneAnalysis::convertTopViewToMeters(point);
         master_project::Point pointMsg;
-        pointMsg.x = point.x;
-        pointMsg.y = point.y;
+        pointMsg.x = coord[X];
+        pointMsg.y = coord[Y];
         areaMsg.area.push_back(pointMsg);
       }
       planeMsg.traversable_areas.push_back(areaMsg);
@@ -910,9 +918,10 @@ void PlaneAnalysis::insertPlanePublisherInformation(
       master_project::HeightArea heightAreaMsg;
       heightAreaMsg.height = heightArea.first;
       for (const cv::Point& point: heightArea.second) {
+        cv::Vec2d coord = PlaneAnalysis::convertTopViewToMeters(point);
         master_project::Point pointMsg;
-        pointMsg.x = point.x;
-        pointMsg.y = point.y;
+        pointMsg.x = coord[X];
+        pointMsg.y = coord[Y];
         heightAreaMsg.points.push_back(pointMsg);
       }
       planeMsg.height_limited_areas.push_back(heightAreaMsg);
