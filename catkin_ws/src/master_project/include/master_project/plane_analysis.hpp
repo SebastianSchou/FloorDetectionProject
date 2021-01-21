@@ -30,7 +30,7 @@ bool   isFaultyObject(const cv::Mat& m,
                       const int      r,
                       const int      c);
 cv::Vec2i getTopViewCoordinates(const cv::Vec3d& p);
-void      convert2dTo3d(const cv::Vec3d& p, Plane& plane, const bool addMargin);
+void      convert2dTo3d(const cv::Vec3d& p, Plane& plane);
 void      calculateNormalAndStandardDeviation(Plane& plane, std::vector<Quadtree*>& unfitNodes);
 bool      isWithinTwoStandardDeviations(const Plane& plane1, const Plane& plane2);
 bool      isWithinTwoStandardDeviations(const Plane& plane, const Quadtree& node);

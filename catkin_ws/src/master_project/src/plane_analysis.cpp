@@ -514,7 +514,7 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
           // Insert non-plane point
           nonPlanePoints.image2dPoints.at<uchar>(r, c) = 255;
           nonPlanePoints.insert3dPoint(point, mutexObjects);
-          PlaneAnalysis::convert2dTo3d(point, nonPlanePoints, false);
+          PlaneAnalysis::convert2dTo3d(point, nonPlanePoints);
           const cv::Vec2i coord = PlaneAnalysis::getTopViewCoordinates(point);
           int margin = 4;
           cv::Point p1(coord[0] - margin, coord[1] - margin);
@@ -558,7 +558,7 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
         continue;
       }
       if (plane.image2dPoints.at<uchar>(r, c) > 0) {
-        PlaneAnalysis::convert2dTo3d(p, plane, true);
+        PlaneAnalysis::convert2dTo3d(p, plane);
       }
     }
   }
@@ -627,15 +627,11 @@ cv::Vec2i PlaneAnalysis::getTopViewCoordinates(const cv::Vec3d& p)
   return cv::Vec2i(col, row);
 }
 
-void PlaneAnalysis::convert2dTo3d(const cv::Vec3d& p, Plane& plane,
-                                  const bool addMargin)
+void PlaneAnalysis::convert2dTo3d(const cv::Vec3d& p, Plane& plane)
 {
   const cv::Vec2i coord = PlaneAnalysis::getTopViewCoordinates(p);
-  int margin = (addMargin) ? 2 : 0;
-
-  cv::Point p1(coord[0] - margin, coord[1] - margin);
-  cv::Point p2(coord[0] + margin, coord[1] + margin);
-  cv::rectangle(plane.topView, p1, p2, cv::Scalar(255), cv::FILLED);
+  cv::Point point(coord[0], coord[1]);
+  cv::rectangle(plane.topView, point, point, cv::Scalar(255), cv::FILLED);
 }
 
 bool PlaneAnalysis::isObjectOnFloor(const Plane& floor, const cv::Point& object)
