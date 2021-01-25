@@ -147,7 +147,7 @@ link_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(${PROJECT_NAME}
-  src/project.cpp
+  src/main.cpp
   src/helper_function.cpp
   src/camera_data.cpp
   src/quadtree.cpp
@@ -244,7 +244,7 @@ install(DIRECTORY msg/
 )
 
 install(PROGRAMS
-  scripts/runMasterProject.sh
+  scripts/runLiveDetection.sh
   scripts/takePicture.sh
   scripts/loadPicture.sh
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/scripts
