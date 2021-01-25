@@ -1,0 +1,6 @@
+<launch>
+  <group ns="project">
+    <node pkg="traversable_area_detection" type="traversable_area_detection" name="traversable_area_detection"/>
+  </group>
+</launch>
+

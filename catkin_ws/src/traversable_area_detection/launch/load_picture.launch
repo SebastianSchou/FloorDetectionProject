@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="traversable_area_detection" type="traversable_area_detection" name="load_picture" args="--load_picture"/>
+</launch>
+

@@ -1,4 +1,0 @@
-<launch>
-    <node pkg="master_project" type="master_project" name="load_picture" args="--load_picture"/>
-</launch>
-

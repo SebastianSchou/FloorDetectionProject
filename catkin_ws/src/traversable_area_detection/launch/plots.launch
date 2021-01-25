@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="traversable_area_detection" name="plots" type="plots.py" output="screen"></node>
+    <include file="$(find traversable_area_detection)/launch/load_picture.launch"></include>
+</launch>
