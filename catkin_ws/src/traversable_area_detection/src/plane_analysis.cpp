@@ -423,6 +423,13 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
 
     // Only look at pixels within the distance limit
     if ((point[Z] > MIN_DISTANCE) && (point[Z] < MAX_DISTANCE)) {
+      // Return if this point is inside a node
+      for (Plane& plane : planes) {
+        if (plane.image2dPoints.at<uchar>(r, c) > 0) {
+          return;
+        }
+      }
+
       // Find plane normals for nearby pixels
       pointS = cameraData.data3d.at<cv::Vec3d>(r + POINT_DELTA - 1, c);
       pointE = cameraData.data3d.at<cv::Vec3d>(r, c + POINT_DELTA - 1);
@@ -448,16 +455,9 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
         if (dist < MAX_POINT_PLANE_DISTANCE) {
           isObject = false;
 
-          // If the point already exists in a plane, skip this point.
-          // Despite having to loop over all nodes, this is generally
-          // faster than performing the rest of the calculations. Get
-          // the distance to the closest node simulationously.
+          // Get the distance to the closest node
           double distanceToNode = MAX_DISTANCE_TO_NODE;
           for (Quadtree *node : plane.nodes) {
-            if (((node->minBounds.x <= c) && (node->minBounds.y <= r) &&
-                 (node->maxBounds.x > c) && (node->maxBounds.y > r))) {
-              return;
-            }
             if (distanceToNode >= MAX_DISTANCE_TO_NODE) {
               distanceToNode =
                 std::min(distanceToNode,
