@@ -254,6 +254,9 @@ cv::Mat DrawingFunctions::drawTopView(const CameraData        & cameraData,
       }
       if (plane.type == PLANE_TYPE_FLOOR) {
         for (const auto& heightArea : plane.heightLimitedAreas) {
+          cv::drawContours(im, heightArea.second, -1, cv::Scalar::all(125),
+                           cv::FILLED);
+          /*
           for (size_t i = 0; i < heightArea.second.size(); i++) {
             cv::Point center = heightArea.second[i];
             std::vector<std::vector<cv::Point>> area =
@@ -268,6 +271,7 @@ cv::Mat DrawingFunctions::drawTopView(const CameraData        & cameraData,
             cv::putText(im, std::to_string(h), center,
                         cv::FONT_HERSHEY_PLAIN, 0.5, cv::Scalar::all(0));
           }
+          */
         }
       }
     } else {

@@ -390,6 +390,8 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
   Plane *floor = new Plane();
   bool   hasFloor = false;
 
+  cv::Mat restrictedArea(nonPlanePoints.topView.size(), CV_8U, cv::Scalar::all(0));
+
   // Set image areas and find floor height
   double maxObjectHeight = OBJECT_MAX_HEIGHT_ABOVE_FLOOR;
   double minObjectHeight = TYPICAL_FLOOR_HEIGHT;
@@ -516,18 +518,20 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
           nonPlanePoints.insert3dPoint(point, mutexObjects);
           PlaneAnalysis::convert2dTo3d(point, nonPlanePoints);
           const cv::Vec2i coord = PlaneAnalysis::getTopViewCoordinates(point);
-          if (-point[Y] < minObjectHeight + MIN_ROBOT_HEIGHT + HEIGHT_DELTA) {
-            int margin = 2;
-            cv::Point p1(coord[0] - margin, coord[1] - margin);
-            cv::Point p2(coord[0] + margin, coord[1] - margin);
-            cv::Point p3(coord[0] + margin, coord[1] + margin);
-            cv::Point p4(coord[0] - margin, coord[1] + margin);
-            std::vector<cv::Point> area {p1, p2, p3, p4 };
-            nonPlanePoints.insertRestrictedArea(area, mutexObjects);
-          } else {
+          bool isWithinRestrictedArea =
+            restrictedArea.at<uchar>(coord[0], coord[1]) > 0;
+          int margin = 2;
+          cv::Point p1(coord[0] - margin, coord[1] - margin);
+          cv::Point p2(coord[0] + margin, coord[1] - margin);
+          cv::Point p3(coord[0] + margin, coord[1] + margin);
+          cv::Point p4(coord[0] - margin, coord[1] + margin);
+          std::vector<cv::Point> area {p1, p2, p3, p4 };
+          if (!isWithinRestrictedArea &&
+              -point[Y] < minObjectHeight + MIN_ROBOT_HEIGHT + HEIGHT_DELTA) {
+            cv::rectangle(restrictedArea, p1, p3, cv::Scalar(255), cv::FILLED);
+          } else if (!isWithinRestrictedArea) {
             nonPlanePoints.insertHeightLimitedArea(-point[Y] - minObjectHeight,
-                                                   cv::Point(coord[0], coord[1]),
-                                                   mutexObjects);
+                                                    area, mutexObjects);
           }
         }
       }
@@ -581,14 +585,7 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
   }
 
   // Remove spots with objects close to floor level
-  cv::Mat objectAreas(nonPlanePoints.topView.size(), CV_8U, cv::Scalar::all(0));
-  if (nonPlanePoints.restrictedAreas.size() > 0) {
-    for (size_t i = 0; i < nonPlanePoints.restrictedAreas.size(); i++) {
-      cv::drawContours(objectAreas, nonPlanePoints.restrictedAreas,
-                       i, 255, cv::FILLED);
-    }
-  }
-  floor->topView -= objectAreas;
+  floor->topView -= restrictedArea;
 
   return nonPlanePoints;
 }
@@ -642,97 +639,43 @@ void PlaneAnalysis::convert2dTo3d(const cv::Vec3d& p, Plane& plane)
   cv::rectangle(plane.topView, point, point, cv::Scalar(255), cv::FILLED);
 }
 
-bool PlaneAnalysis::isObjectOnFloor(const Plane& floor, const cv::Point& object)
-{
-  for (const auto& area : floor.traversableAreas) {
-    if (cv::pointPolygonTest(area, object, false) < 0) {
-      return true;
-    }
-  }
-  return false;
-}
-
 void PlaneAnalysis::cleanUpHeightLimitedAreas(Plane& nonPlanePoints,
                                               Plane& floor)
 {
-  // Removes any height limitation which isn't within floor area, and if
-  // several limitations exist above each other, only showcase the lowest
-  // height limitation
+  // Combines all contour for each height and removes contour from greater
+  // heights which exists in lower heights
+  for (auto const& x : nonPlanePoints.heightLimitedAreas) {
+    // Create image and draw contours
+    cv::Mat heightIm(nonPlanePoints.topView.size(), CV_8U, cv::Scalar::all(0));
+    cv::drawContours(heightIm, x.second, -1, cv::Scalar(255), cv::FILLED);
 
-  // Use a pointer to the height limited areas for better readability
-  std::map<double, std::vector<cv::Point> > *points =
-    &nonPlanePoints.heightLimitedAreas;
+    // Removes elements which isn't above the floor
+    heightIm &= floor.topView;
 
-  // Radius for which if an higher object is within this radius for a lower
-  // object, the higher objects is removed. Remember that the radius is in
-  // the value of TOP_VIEW_DELTA.
-  int radius = 1;
-
-  // Loop over all possible object heights
-  double minHeight = points->begin()->first;
-  double maxHeight = OBJECT_MAX_HEIGHT_ABOVE_FLOOR;
-  for (double hL = minHeight; hL < maxHeight; hL += HEIGHT_DELTA) {
-    // Due to step values for double, round to nearest HEIGHT_DELTA value
-    // to be able to access map
-    hL = roundToNearestValue(hL, HEIGHT_DELTA);
-
-    // Ignore non-existant map values and remove keys which has no values
-    if (points->find(hL) == points->end()) {
-      continue;
-    } else if (points->at(hL).size() == 0) {
-      points->erase(hL);
+    // Continue to next height if there are no non zero elements left in the
+    // image for this height
+    if (cv::countNonZero(heightIm) == 0) {
       continue;
     }
 
-    // Loop over areas for this height (hL)
-    for (size_t i = 0; i < points->at(hL).size(); i++) {
-      // Get area center. If area center is not above floor, remove it.
-      if (PlaneAnalysis::isObjectOnFloor(floor, points->at(hL)[i])) {
-        points->at(hL).erase(points->at(hL).begin() + i);
-        i--;
-        if (points->at(hL).size() == 0) {
-          points->erase(hL);
-          break;
-        }
-        continue;
-      }
-
-      // Loop over all higher objects (hH)
-      for (double hH = hL + HEIGHT_DELTA; hH < maxHeight; hH += HEIGHT_DELTA) {
-        // Ignore non-existant map values and remove keys which has no values
-        hH = roundToNearestValue(hH, HEIGHT_DELTA);
-        if (points->find(hH) == points->end()) {
-          continue;
-        } else if (points->at(hH).size() == 0) {
-          points->erase(hH);
-          continue;
-        }
-
-        // Loop over areas for this height (hH)
-        for (size_t j = 0; j < points->at(hH).size(); j++) {
-          // Get area center. If not above floor level, or if area of lower
-          // height (hL)'s center is within the area, delete the area
-
-          if (((points->at(hL)[i].x >= points->at(hH)[j].x - radius) &&
-               (points->at(hL)[i].x <= points->at(hH)[j].x + radius) &&
-               (points->at(hL)[i].y >= points->at(hH)[j].y - radius) &&
-               (points->at(hL)[i].y <= points->at(hH)[j].y + radius)) ||
-              PlaneAnalysis::isObjectOnFloor(floor, points->at(hH)[j])) {
-            points->at(hH).erase(points->at(hH).begin() + j);
-            j--;
-            if (points->at(hH).size() == 0) {
-              points->erase(hH);
-              break;
-            }
-            continue;
-          }
-        }
-      }
+    // Remove all elements which appear in previous heights
+    for (auto const& y : floor.heightLimitedAreas) {
+      cv::drawContours(heightIm, y.second, -1, cv::Scalar(0), cv::FILLED);
     }
+
+    // Continue to next height if there are no non zero elements left in the
+    // image for this height
+    if (cv::countNonZero(heightIm) == 0) {
+      continue;
+    }
+
+    // Find the contours and set them as the floors height limited areas for
+    // this height
+    std::vector<std::vector<cv::Point> > contours;
+    cv::findContours(heightIm, contours, cv::RETR_TREE,
+                     cv::CHAIN_APPROX_TC89_KCOS);
+    floor.heightLimitedAreas[x.first] = contours;
   }
-
-  // Set height limited areas for the floor
-  floor.heightLimitedAreas = *points;
 }
 
 void PlaneAnalysis::computePlaneContour(std::vector<Plane>& planes,
@@ -917,12 +860,16 @@ void PlaneAnalysis::insertPlanePublisherInformation(
     for (const auto& heightArea : plane.heightLimitedAreas) {
       traversable_area_detection::HeightArea heightAreaMsg;
       heightAreaMsg.height = heightArea.first;
-      for (const cv::Point& point: heightArea.second) {
-        cv::Vec2d coord = PlaneAnalysis::convertTopViewToMeters(point);
-        traversable_area_detection::Point pointMsg;
-        pointMsg.x = coord[X];
-        pointMsg.y = coord[Y];
-        heightAreaMsg.points.push_back(pointMsg);
+      for (const std::vector<cv::Point>& area: heightArea.second) {
+        traversable_area_detection::Area areaMsg;
+        for (const cv::Point& point : area) {
+          cv::Vec2d coord = PlaneAnalysis::convertTopViewToMeters(point);
+          traversable_area_detection::Point pointMsg;
+          pointMsg.x = coord[X];
+          pointMsg.y = coord[Y];
+          areaMsg.area.push_back(pointMsg);
+        }
+        heightAreaMsg.area.push_back(areaMsg);
       }
       planeMsg.height_limited_areas.push_back(heightAreaMsg);
     }

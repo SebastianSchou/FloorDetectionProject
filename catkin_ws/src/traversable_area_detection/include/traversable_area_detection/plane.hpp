@@ -166,12 +166,12 @@ public:
   }
 
   void insertHeightLimitedArea(const double     height,
-                               const cv::Point& point,
-                               std::mutex     & mutex)
+                                const std::vector<cv::Point>& area,
+                                std::mutex     & mutex)
   {
     std::lock_guard<std::mutex> lock(mutex);
     const double h = roundToNearestValue(height, HEIGHT_DELTA);
-    heightLimitedAreas[h].push_back(point);
+    heightLimitedAreas[h].push_back(area);
   }
 
   void setImagePoint(const cv::Vec2i& point)
@@ -195,7 +195,7 @@ public:
   cv::Vec3d position, normal;
   cv::Scalar color;
   std::vector<std::vector<cv::Point> > traversableAreas, restrictedAreas;
-  std::map<double, std::vector<cv::Point> > heightLimitedAreas;
+  std::map<double, std::vector<std::vector<cv::Point> > > heightLimitedAreas;
   std::vector<Quadtree *> nodes;
   std::vector<cv::Vec3d> points3d;
   std::vector<cv::Vec2i> points2d;

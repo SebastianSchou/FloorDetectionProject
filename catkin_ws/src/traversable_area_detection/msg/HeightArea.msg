@@ -1,2 +1,2 @@
 float64 height
-Point[] points
+Area[] area

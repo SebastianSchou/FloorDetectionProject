@@ -45,7 +45,6 @@ float     leastSquareError(const Plane& plane, const Quadtree& node);
 void      printPlanesInformation(const std::vector<Plane>& planes);
 void      printPlaneInformation(const Plane& plane);
 void      cleanUpHeightLimitedAreas(Plane& nonPlanePoints, Plane& floor);
-bool      isObjectOnFloor(const Plane& floor, const cv::Point& object);
 void      insertPlanePublisherInformation(
   traversable_area_detection::HoughPlaneTransform& msg, const std::vector<Plane>& planes,
   const bool includeNodeInformation = false);
