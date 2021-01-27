@@ -1,14 +1,17 @@
 #include "traversable_area_detection/camera_data.hpp"
 #include "ros/ros.h"
 
-#define FRAMES_PER_SECOND 15
+#define FRAMES_PER_SECOND 60
 
 CameraData::CameraData()
 {
 }
 
-bool CameraData::initializeCamera()
+bool CameraData::initializeCamera(const bool loadColorImage)
 {
+  // Set value for loadColorImage_
+  loadColorImage_ = loadColorImage;
+
   // Check if Realsense camera is connected
   e = 0;
   context = rs2_create_context(RS2_API_VERSION, &e);
@@ -23,11 +26,13 @@ bool CameraData::initializeCamera()
   // Start rs2 pipe with config
   ROS_INFO("Initializing Realsense D435 camera.");
 
-  config.enable_stream(RS2_STREAM_COLOR,
-                       IMAGE_WIDTH,
-                       IMAGE_HEIGHT,
-                       RS2_FORMAT_BGR8,
-                       FRAMES_PER_SECOND);
+  if (loadColorImage_) {
+    config.enable_stream(RS2_STREAM_COLOR,
+                         IMAGE_WIDTH,
+                         IMAGE_HEIGHT,
+                         RS2_FORMAT_BGR8,
+                         FRAMES_PER_SECOND);
+  }
   config.enable_stream(RS2_STREAM_DEPTH,
                        IMAGE_WIDTH,
                        IMAGE_HEIGHT,
@@ -117,42 +122,42 @@ bool CameraData::processFrames()
   }
 
   // Get regular color image and align data to depth
-  rs2::video_frame colorNormal = frames.get_color_frame();
+  rs2::video_frame colorNormal(frames);
+  if (loadColorImage_) {
+    colorNormal = frames.get_color_frame();
 
-  // Align depth and color frames
-  rs2::align alignToDepth(RS2_STREAM_DEPTH);
-  frames = alignToDepth.process(frames);
-
+    // Align depth and color frames
+    rs2::align alignToDepth(RS2_STREAM_DEPTH);
+    frames = alignToDepth.process(frames);
+  }
   // Get data
   rs2::depth_frame depth = frames.get_depth_frame();
   rs2::depth_frame depthFrameFiltered = decimationFilter.process(depth);
   depthFrameFiltered = spatialFilter.process(depthFrameFiltered);
   depthFrameFiltered = temporalFilter.process(depthFrameFiltered);
-  rs2::video_frame depthColor = colorMap.colorize(depthFrameFiltered);
-  rs2::video_frame color = frames.get_color_frame();
+  rs2::video_frame color(frames);
+  if (loadColorImage_) {
+    color = frames.get_color_frame();
+  }
 
   // Get decimated depth image size
   width = (int)depthFrameFiltered.get_width();
   height = (int)depthFrameFiltered.get_height();
 
-  // Convert to Mat for OpenCV use
-  // Color image aligned to depth
-  depthAlignedColorImage = cv::Mat(cv::Size(IMAGE_WIDTH, IMAGE_HEIGHT),
-                                   CV_8UC3,
-                                   (void *)color.get_data(),
-                                   cv::Mat::AUTO_STEP);
+  if (loadColorImage_) {
+    // Convert to Mat for OpenCV use
+    // Color image aligned to depth
+    depthAlignedColorImage = cv::Mat(cv::Size(IMAGE_WIDTH, IMAGE_HEIGHT),
+                                     CV_8UC3,
+                                     (void *)color.get_data(),
+                                     cv::Mat::AUTO_STEP);
 
-  // Regular color image
-  normalColorImage = cv::Mat(cv::Size(IMAGE_WIDTH, IMAGE_HEIGHT),
-                             CV_8UC3,
-                             (void *)colorNormal.get_data(),
-                             cv::Mat::AUTO_STEP);
-
-  // Colorized depth image
-  colorizedDepthImage = cv::Mat(cv::Size(width, height),
-                                CV_8UC3,
-                                (void *)depthColor.get_data(),
-                                cv::Mat::AUTO_STEP);
+    // Regular color image
+    normalColorImage = cv::Mat(cv::Size(IMAGE_WIDTH, IMAGE_HEIGHT),
+                               CV_8UC3,
+                               (void *)colorNormal.get_data(),
+                               cv::Mat::AUTO_STEP);
+  }
 
   // Get depth data as a matrix
   cv::Mat depthDataTemp = cv::Mat(cv::Size(width, height), CV_16UC1,

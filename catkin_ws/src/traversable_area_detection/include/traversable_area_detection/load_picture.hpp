@@ -51,8 +51,6 @@ static void planePubCallback(const std::string& file, const int waitTime)
     cv::Mat onlyQuadtree = cameraData.depthAlignedColorImage.clone();
     cv::Mat cleanedPlanePoints = cameraData.depthAlignedColorImage.clone();
     DrawingFunctions::assignColorToPlanes(planes);
-    DrawingFunctions::drawQuadtreeBorders(cameraData.colorizedDepthImage,
-                                          houghPlaneTransform.root);
     DrawingFunctions::drawPlanesInQuadtree(onlyQuadtree,
                                            houghPlaneTransform.root,
                                            cameraData);

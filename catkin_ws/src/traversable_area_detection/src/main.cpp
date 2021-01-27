@@ -48,23 +48,32 @@ static int planePubCallback(CameraData& cameraData, float& timeSum,
     iteration++;
 
     // Draw
-    cv::Mat cleanedPlanePoints = cameraData.depthAlignedColorImage.clone();
     DrawingFunctions::assignColorToPlanes(planes);
-    DrawingFunctions::drawOnlyPlaneQuadtreeBorders(cleanedPlanePoints,
-                                                   planes,
-                                                   cameraData);
-    DrawingFunctions::drawPlanes(cleanedPlanePoints, planes);
+    cv::Mat cleanedPlanePoints;
+    if (cameraData.loadColorImage_) {
+      cleanedPlanePoints = cameraData.depthAlignedColorImage.clone();
+      DrawingFunctions::drawOnlyPlaneQuadtreeBorders(cleanedPlanePoints,
+                                                     planes,
+                                                     cameraData);
+      DrawingFunctions::drawPlanes(cleanedPlanePoints, planes);
+    }
     cv::Mat topView =
       DrawingFunctions::drawTopView(cameraData, planes,
                                     nonPlanePoints.topView);
+    //cv::Mat accum = DrawingFunctions::drawAccumulatorCellVotes(640, 480, *houghPlaneTransform.accumulator);
 
     // Show data
+    //cv::imshow("Accumulator", accum);
     cv::imshow("Top view", topView);
-    cv::imshow("Realsense plane points cleaned", cleanedPlanePoints);
+    if (cameraData.loadColorImage_) {
+      cv::imshow("Realsense plane points cleaned", cleanedPlanePoints);
+    }
   }
   msg.success = true;
   pubHoughPlaneTransformLive.publish(msg);
-  cv::imshow("Realsense color normal", cameraData.normalColorImage);
+  if (cameraData.loadColorImage_) {
+    cv::imshow("Realsense color normal", cameraData.normalColorImage);
+  }
   key = cv::waitKey(1);
   return 0;
 }
@@ -83,7 +92,7 @@ int main(int argc, char **argv)
 
   // Init Intel RealSense camera
   CameraData cameraData;
-  if (!cameraData.initializeCamera()) {
+  if (!cameraData.initializeCamera(true)) {
     return EXIT_ERROR;
   }
 
@@ -96,7 +105,7 @@ int main(int argc, char **argv)
   float timeSum = 0.0;
   int   iteration = 0;
   char  key = ' ';
-  ros::Rate rate(20); // [Hz]
+  ros::Rate rate(50); // [Hz]
   while (key != 'q') {
     if (planePubCallback(cameraData, timeSum, iteration, key) == EXIT_ERROR) {
       return EXIT_ERROR;

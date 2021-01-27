@@ -27,7 +27,7 @@ class CameraData {
 public:
 
   CameraData();
-  bool initializeCamera();
+  bool initializeCamera(const bool loadColorImage = true);
   bool processFrames();
   bool loadImage(const std::string& filename);
 
@@ -35,9 +35,9 @@ public:
   rs2::pipeline_profile profile;
   int width, height;
   double fx, fy, ppx, ppy;
-  cv::Mat normalColorImage, colorizedDepthImage, depthAlignedColorImage,
-          depthData, data3d;
+  cv::Mat normalColorImage, depthAlignedColorImage, depthData, data3d;
   FilterVariables filterVariables;
+  bool loadColorImage_;
 
 private:
 
