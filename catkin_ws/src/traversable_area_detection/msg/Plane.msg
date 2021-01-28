@@ -10,4 +10,5 @@ float64 theta
 float64 distance
 float64 area
 Area[] traversable_areas
+Area[] restricted_areas
 HeightArea[] height_limited_areas

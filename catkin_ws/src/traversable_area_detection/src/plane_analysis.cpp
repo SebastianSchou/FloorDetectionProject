@@ -684,8 +684,7 @@ void PlaneAnalysis::computePlaneContour(std::vector<Plane>& planes,
   // Compute the contour of the floor planes to detect which areas are,
   // traversable
   for (Plane& plane : planes) {
-    if ((plane.type != PLANE_TYPE_FLOOR) &&
-        (plane.type != PLANE_TYPE_OTHER)) {
+    if (plane.type == PLANE_TYPE_CEILING) {
       continue;
     }
 
@@ -710,6 +709,15 @@ void PlaneAnalysis::computePlaneContour(std::vector<Plane>& planes,
       // of pixel area within the contour. If close to zero, it is hollow
       cv::Mat contourImage(plane.topView.size(), CV_8U, cv::Scalar::all(0));
       cv::drawContours(contourImage, contours, i, 255, cv::FILLED);
+      if (plane.type != PLANE_TYPE_FLOOR &&
+          plane.type != PLANE_TYPE_OTHER) {
+        // Simplify area
+        std::vector<cv::Point> approx;
+        double epsilon = 0.005 * cv::arcLength(contour, true);
+        cv::approxPolyDP(contour, approx, epsilon, true);
+        plane.area += area;
+        plane.restrictedAreas.push_back(approx);
+      }
       bool isHollow = cv::mean(plane.topView, contourImage)[0] < 125.0;
 
       // Get center
@@ -723,17 +731,20 @@ void PlaneAnalysis::computePlaneContour(std::vector<Plane>& planes,
         continue;
       }
 
-      // Fill counter if hollow and below max area size. If not hollow
-      // and below min area size, discard it. Else, add as traversable
-      // or restricted area
+      // Check if an object is within area
       bool isObjectRestrictedArea = false;
       for (const cv::Vec3d& p : nonPlanePoints.points3d) {
         cv::Point2f areaCenter(PlaneAnalysis::getTopViewCoordinates(p));
         isObjectRestrictedArea =
-          cv::pointPolygonTest(contour, areaCenter, false) > 0;
-        break;
+          cv::pointPolygonTest(contour, areaCenter, false) >= 0;
+        if (isObjectRestrictedArea) {
+          break;
+        }
       }
 
+      // Fill counter if hollow and below max area size. If not hollow
+      // and below min area size, discard it. Else, add as traversable
+      // or restricted area
       if (isHollow && (area < MAX_PLANE_AREA_FILL) && !isObjectRestrictedArea) {
         cv::floodFill(plane.topView, cv::Point(cx, cy), cv::Scalar(255));
         contours.erase(contours.begin() + i);
@@ -747,6 +758,7 @@ void PlaneAnalysis::computePlaneContour(std::vector<Plane>& planes,
         double epsilon = 0.005 * cv::arcLength(contour, true);
         cv::approxPolyDP(contour, approx, epsilon, true);
         if (isHollow) {
+          plane.area -= area;
           plane.restrictedAreas.push_back(approx);
         } else {
           plane.area += area;
@@ -847,6 +859,17 @@ void PlaneAnalysis::insertPlanePublisherInformation(
     planeMsg.distance = plane.rho;
     planeMsg.area = plane.area;
     for (const std::vector<cv::Point>& area : plane.traversableAreas) {
+      traversable_area_detection::Area areaMsg;
+      for (const cv::Point& point : area) {
+        cv::Vec2d coord = PlaneAnalysis::convertTopViewToMeters(point);
+        traversable_area_detection::Point pointMsg;
+        pointMsg.x = coord[X];
+        pointMsg.y = coord[Y];
+        areaMsg.area.push_back(pointMsg);
+      }
+      planeMsg.traversable_areas.push_back(areaMsg);
+    }
+    for (const std::vector<cv::Point>& area : plane.restrictedAreas) {
       traversable_area_detection::Area areaMsg;
       for (const cv::Point& point : area) {
         cv::Vec2d coord = PlaneAnalysis::convertTopViewToMeters(point);
