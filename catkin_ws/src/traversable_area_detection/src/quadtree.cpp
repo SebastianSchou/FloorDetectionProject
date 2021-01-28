@@ -5,10 +5,11 @@
 // Assuming normal distribution, 95% of the value is within the
 // interval [-1.96, 1.96]
 #define CONFIDENCE_INTERVAL_95_PERCENTAGE 1.96
-#define MIN_SAMPLE_DENSITY 0.9 // [%]
-#define MAX_GRADIANT_SUM 60.0  // [m]
-#define ROWS_REMOVE 3
-#define COLS_REMOVE 3
+#define MIN_SAMPLE_DENSITY 0.9                       // [%]
+#define MAX_GRADIANT_SUM 960.0 / square(IMAGE_SCALE) // [m]
+#define ROWS_REMOVE 12 / IMAGE_SCALE
+#define COLS_REMOVE 12 / IMAGE_SCALE
+#define MIN_SAMPLES 400 / square(IMAGE_SCALE)
 
 Quadtree::Quadtree()
 {
@@ -25,7 +26,7 @@ Quadtree::Quadtree()
   rho = 0.0; phi = 0.0; theta = 0.0;
   id = 0;
   idNo = 0;
-  setMinSamplesInNode(25);
+  setMinSamplesInNode(MIN_SAMPLES);
   setMaxPlaneThickness(0.40);
 }
 

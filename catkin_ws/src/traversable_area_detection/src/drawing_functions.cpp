@@ -230,7 +230,7 @@ void DrawingFunctions::drawPlanes(cv::Mat                 & image,
   for (const Plane& plane : planes) {
     im.setTo(plane.color, plane.image2dPoints);
   }
-  cv::resize(im, im, im.size() * 4);
+  cv::resize(im, im, cv::Size(IMAGE_WIDTH, IMAGE_HEIGHT));
   cv::addWeighted(image, 1.0, im, 0.8, 0.0, image);
 }
 

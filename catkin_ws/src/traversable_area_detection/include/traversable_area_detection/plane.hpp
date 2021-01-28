@@ -7,10 +7,10 @@
 
 #define MAX_ANGLE_DIFFERENCE 4.0 * CV_PI / 180.0 // [radians]
 #define MAX_DISTANCE_DIFFERENCE 0.08             // [m]
-#define MIN_INDEPENDENT_NODE_SIZE 50
+#define MIN_INDEPENDENT_NODE_SIZE 800 / square(IMAGE_SCALE)
 #define POINT_DELTA 2
-#define MIN_PLANE_SAMPLE_SIZE 500
-#define MIN_NODE_NEIGHBOR_SAMPLE_SUM 100
+#define MIN_PLANE_SAMPLE_SIZE 8000 / square(IMAGE_SCALE)
+#define MIN_NODE_NEIGHBOR_SAMPLE_SUM 1600 / square(IMAGE_SCALE)
 #define TOP_VIEW_DELTA 0.03                                          // [m]
 #define SIDE_VIEW_DELTA 0.01                                         // [m]
 #define TOP_VIEW_HEIGHT std::ceil(MAX_DISTANCE / TOP_VIEW_DELTA)     // [pixels]
