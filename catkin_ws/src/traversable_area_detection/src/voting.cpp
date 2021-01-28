@@ -42,14 +42,14 @@ bool computeKernel(Quadtree           & node,
                  kernel.phiIndex, kernel.rhoIndex);
   if (!accum.processIndexLimits(kernel.thetaIndex, kernel.phiIndex,
                                 kernel.rhoIndex)) {
-    ROS_ERROR("Kernels rho index exceeded maximum (rho: %d, max: %d)."
-              " This should NOT happen.", kernel.rhoIndex, accum.rhoLength);
     return false;
   }
   kernel.thetaIndex = accum.fixTheta(kernel.thetaIndex, kernel.phiIndex);
 
   // Process kernel
-  kernel.computeKernelParameters();
+  if (!kernel.computeKernelParameters()) {
+    return false;
+  }
   usedKernels.push_back(kernel);
   return true;
 }
@@ -59,8 +59,6 @@ void gaussianVoting3d(Kernel          & kernel,
                       Accumulator     & accum,
                       std::vector<Bin>& usedBins)
 {
-  accum.at(kernel.thetaIndex, kernel.phiIndex, kernel.rhoIndex).top = true;
-
   // Vote in positive phi direction
   gaussianVoting2d(accum, kernel, usedBins, kernel.thetaIndex, kernel.phiIndex,
                    kernel.rhoIndex, 0, +1);
@@ -175,12 +173,9 @@ bool gaussianVoting1d(Accumulator     & accum,
       break;
     }
     votes = gauss;
-    if (votes >= 0.0) {
-      voted = vote(usedBins, accum.at(t, p, rhoIndex), kernel, votes, t, p,
-                   rhoIndex, accum);
-    } else {
-      break;
-    }
+    voted = vote(usedBins, accum.at(t, p, rhoIndex), kernel, votes, t, p,
+                 rhoIndex, accum);
+
     rhoIndex += rhoIndexIncrement;
     rho += rhoIncrement;
   }
@@ -201,13 +196,9 @@ bool gaussianVoting1d(Accumulator     & accum,
     if (gauss < kernel.votingLimit) {
       break;
     }
-
-    if ((votes = gauss) >= 0.0) {
-      voted = vote(usedBins, accum.at(t, p, rhoIndex), kernel, votes, t, p,
-                   rhoIndex, accum);
-    } else {
-      break;
-    }
+    votes = gauss;
+    voted = vote(usedBins, accum.at(t, p, rhoIndex), kernel, votes, t, p,
+                 rhoIndex, accum);
     rhoIndex += rhoIndexIncrement;
     rho -= rhoIncrement;
   }

@@ -3,9 +3,9 @@
 #include "traversable_area_detection/plane.hpp"
 #include "traversable_area_detection/plane_analysis.hpp"
 
-inline void peakDetection(std::vector<Plane> & planes,
-                          Accumulator        & accum,
-                          std::vector<Bin>   & usedBins,
+inline void peakDetection(std::vector<Plane>       & planes,
+                          Accumulator              & accum,
+                          std::vector<Bin>         & usedBins,
                           const std::vector<Kernel>& usedKernels)
 {
   // Smooth out votes with a lowpass filter
@@ -86,8 +86,7 @@ inline void peakDetection(std::vector<Plane> & planes,
     plane.phiIndex = cell->phiIndex;
     plane.rhoIndex = cell->rhoIndex;
     plane.id = planeId++;
-    plane.computePlaneParameters(planes);
-    if (plane.samples > 0) {
+    if (plane.computePlaneParameters(planes)) {
       planes.push_back(plane);
     }
   }

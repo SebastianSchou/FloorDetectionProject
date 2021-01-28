@@ -10,8 +10,9 @@
 
 class HoughPlaneTransform {
 public:
+
   HoughPlaneTransform(CameraData& cameraData,
-                      const bool printTime = false)
+                      const bool  printTime = false)
   {
     auto start = std::chrono::steady_clock::now();
 

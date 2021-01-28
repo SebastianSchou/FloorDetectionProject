@@ -49,17 +49,18 @@ public:
   {
   }
 
-  void computePlaneParameters(std::vector<Plane>& planes)
+  bool computePlaneParameters(std::vector<Plane>& planes)
   {
     cv::Vec3d newNormal(0.0, 0.0, 0.0);
     double    newRho = 0.0;
+
     // Get nodes representing the plane
     for (size_t i = 0; i < nodes.size(); i++) {
       Quadtree *node = nodes[i];
       if (node->samples < MIN_INDEPENDENT_NODE_SIZE) {
         if (!hasNeighbor(node)) {
           if (nodes.size() <= 1) {
-            return;
+            return false;
           }
           nodes.erase(nodes.begin() + i);
           i--;
@@ -76,7 +77,7 @@ public:
                 leastSquareError(*this, *node)) {
               skip = true;
               if (nodes.size() <= 1) {
-                return;
+                return false;
               }
               nodes.erase(nodes.begin() + i);
               i--;
@@ -103,7 +104,9 @@ public:
       position = normal * rho;
       phi = std::acos(normal[2]);
       theta = std::atan2(normal[1], normal[0]);
+      return true;
     }
+    return false;
   }
 
   float leastSquareError(const Plane& plane, const Quadtree& node)
@@ -165,9 +168,9 @@ public:
     restrictedAreas.push_back(area);
   }
 
-  void insertHeightLimitedArea(const double     height,
-                                const std::vector<cv::Point>& area,
-                                std::mutex     & mutex)
+  void insertHeightLimitedArea(const double                  height,
+                               const std::vector<cv::Point>& area,
+                               std::mutex                  & mutex)
   {
     std::lock_guard<std::mutex> lock(mutex);
     const double h = roundToNearestValue(height, HEIGHT_DELTA);
@@ -180,11 +183,6 @@ public:
                  point[0] - std::floor(POINT_DELTA / 2)),
     p2(point[1] + std::ceil(POINT_DELTA / 2),
        point[0] + std::ceil(POINT_DELTA / 2));
-    cv::rectangle(image2dPoints, p1, p2, cv::Scalar::all(255), cv::FILLED);
-  }
-
-  void setImageArea(const cv::Point& p1, const cv::Point& p2)
-  {
     cv::rectangle(image2dPoints, p1, p2, cv::Scalar::all(255), cv::FILLED);
   }
 

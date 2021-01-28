@@ -130,6 +130,7 @@ bool CameraData::processFrames()
     rs2::align alignToDepth(RS2_STREAM_DEPTH);
     frames = alignToDepth.process(frames);
   }
+
   // Get data
   rs2::depth_frame depth = frames.get_depth_frame();
   rs2::depth_frame depthFrameFiltered = decimationFilter.process(depth);

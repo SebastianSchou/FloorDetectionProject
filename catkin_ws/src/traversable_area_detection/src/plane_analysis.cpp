@@ -170,7 +170,7 @@ void PlaneAnalysis::transferNodes(Plane& plane1, Plane& plane2)
 }
 
 void PlaneAnalysis::calculateNormalAndStandardDeviation(
-  Plane& plane, std::vector<Quadtree*>& unfitNodes)
+  Plane& plane, std::vector<Quadtree *>& unfitNodes)
 {
   // Calculates new normal for plane defined by the nodes it contains.
   // Also calculates standard deviation for theta, phi, and rho, as well
@@ -193,12 +193,12 @@ void PlaneAnalysis::calculateNormalAndStandardDeviation(
   double thetaStd = 0.0, phiStd = 0.0, rhoStd = 0.0;
   for (size_t i = 0; i < plane.nodes.size(); i++) {
     Quadtree *node = plane.nodes[i];
-    bool hasLowLsqe = PlaneAnalysis::leastSquareError(plane, *node) < 1.5;
+    bool  hasLowLsqe = PlaneAnalysis::leastSquareError(plane, *node) < 1.5;
     float phiDiff = std::abs(node->phi - plane.phi);
     float thetaDiff = PlaneAnalysis::getThetaDifference(plane, *node);
     if (!hasLowLsqe ||
-        (phiDiff > 2 * MAX_ANGLE_DIFFERENCE &&
-         thetaDiff > 2 * MAX_ANGLE_DIFFERENCE)) {
+        ((phiDiff > 2 * MAX_ANGLE_DIFFERENCE) &&
+         (thetaDiff > 2 * MAX_ANGLE_DIFFERENCE))) {
       unfitNodes.push_back(node);
       plane.nodes.erase(plane.nodes.begin() + i);
       i--;
@@ -239,19 +239,23 @@ float PlaneAnalysis::leastSquareError(const Plane& plane, const Quadtree& node)
 bool PlaneAnalysis::isWithinTwoStandardDeviations(const Plane& plane1,
                                                   const Plane& plane2)
 {
-  return (std::abs(plane1.rho - plane2.rho) < 2 * plane1.rhoStd &&
-          std::abs(plane1.phi - plane2.phi) < 2 * plane1.phiStd &&
-          PlaneAnalysis::getThetaDifference(plane1, plane2) < 2 * plane1.thetaStd);
+  return std::abs(plane1.rho - plane2.rho) < 2 * plane1.rhoStd &&
+         std::abs(plane1.phi - plane2.phi) < 2 * plane1.phiStd &&
+         PlaneAnalysis::getThetaDifference(plane1,
+                                           plane2) < 2 * plane1.thetaStd;
 }
 
-bool PlaneAnalysis::isWithinTwoStandardDeviations(const Plane& plane, const Quadtree& node)
+bool PlaneAnalysis::isWithinTwoStandardDeviations(const Plane   & plane,
+                                                  const Quadtree& node)
 {
-  return (std::abs(plane.rho - node.rho) < 2 * plane.rhoStd &&
-          std::abs(plane.phi - node.phi) < 2 * plane.phiStd &&
-          PlaneAnalysis::getThetaDifference(plane, node) < 2 * plane.thetaStd);
+  return std::abs(plane.rho - node.rho) < 2 * plane.rhoStd &&
+         std::abs(plane.phi - node.phi) < 2 * plane.phiStd &&
+         PlaneAnalysis::getThetaDifference(plane,
+                                           node) < 2 * plane.thetaStd;
 }
 
-void PlaneAnalysis::mergeSimilarPlanes(std::vector<Plane>& planes, std::vector<Quadtree*>& unfitNodes)
+void PlaneAnalysis::mergeSimilarPlanes(std::vector<Plane>     & planes,
+                                       std::vector<Quadtree *>& unfitNodes)
 {
   for (size_t i = 0; i < planes.size() - 1; i++) {
     for (size_t j = i + 1; j < planes.size(); j++) {
@@ -264,7 +268,8 @@ void PlaneAnalysis::mergeSimilarPlanes(std::vector<Plane>& planes, std::vector<Q
         PlaneAnalysis::transferNodes(planes[i], planes[j]);
         planes.erase(planes.begin() + j);
         j--;
-        PlaneAnalysis::calculateNormalAndStandardDeviation(planes[i], unfitNodes);
+        PlaneAnalysis::calculateNormalAndStandardDeviation(planes[i],
+                                                           unfitNodes);
         break;
       }
     }
@@ -303,24 +308,28 @@ double PlaneAnalysis::getDistanceToNode(const cv::Mat& m, const Quadtree& node,
   return cv::norm(p - nodeP, cv::NORM_L2);
 }
 
-float PlaneAnalysis::getThetaDifference(const Plane& plane1, const Plane& plane2)
+float PlaneAnalysis::getThetaDifference(const Plane& plane1,
+                                        const Plane& plane2)
 {
   // Theta goes from 0 to 2 PI, with 0 and 2 PI being the same. Therefore, if
   // the difference is too large, it is subtracted from 2 PI
   float thetaDiff = std::abs(plane1.theta - plane2.theta);
+
   thetaDiff = thetaDiff > CV_PI ? 2 * CV_PI - thetaDiff : thetaDiff;
   return thetaDiff;
 }
 
-float PlaneAnalysis::getThetaDifference(const Plane& plane, const Quadtree& node)
+float PlaneAnalysis::getThetaDifference(const Plane   & plane,
+                                        const Quadtree& node)
 {
   float thetaDiff = std::abs(plane.theta - node.theta);
+
   thetaDiff = thetaDiff > CV_PI ? 2 * CV_PI - thetaDiff : thetaDiff;
   return thetaDiff;
 }
 
-void PlaneAnalysis::matchUnfitNodes(std::vector<Plane>& planes,
-                                    std::vector<Quadtree*>& unfitNodes)
+void PlaneAnalysis::matchUnfitNodes(std::vector<Plane>     & planes,
+                                    std::vector<Quadtree *>& unfitNodes)
 {
   // For each unfit node, compare it to each plane, and the plane with the
   // smallest least square error gets the node. Other requirements to get the
@@ -330,16 +339,16 @@ void PlaneAnalysis::matchUnfitNodes(std::vector<Plane>& planes,
   //  - Is within two standard deviations or has similar normal and distance
   //  - If lsqe is small enough, append it plane even if above requirement is
   //    not met
-  for (Quadtree* node : unfitNodes) {
-    Plane* bestFit;
-    float bestValue = 1.0;
+  for (Quadtree *node : unfitNodes) {
+    Plane *bestFit;
+    float  bestValue = 1.0;
     for (Plane& plane : planes) {
       float lsqe = PlaneAnalysis::leastSquareError(plane, *node);
-      if  (lsqe > 0.0001 && lsqe < bestValue &&
-           (lsqe < 0.05 ||
-            (PlaneAnalysis::isWithinTwoStandardDeviations(plane, *node) ||
-             (PlaneAnalysis::hasSimilarNormal(plane, *node) &&
-              PlaneAnalysis::hasSimilarDistance(plane, *node))))) {
+      if ((lsqe > 0.0001) && (lsqe < bestValue) &&
+          ((lsqe < 0.05) ||
+           (PlaneAnalysis::isWithinTwoStandardDeviations(plane, *node) ||
+            (PlaneAnalysis::hasSimilarNormal(plane, *node) &&
+             PlaneAnalysis::hasSimilarDistance(plane, *node))))) {
         bestFit = &plane;
         bestValue = lsqe;
       }
@@ -367,9 +376,12 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
   nonPlanePoints.image2dPoints =
     cv::Mat(cv::Size(cameraData.width, cameraData.height), CV_8U,
             cv::Scalar::all(0));
+  cv::Mat restrictedArea(nonPlanePoints.topView.size(),
+                         CV_8U,
+                         cv::Scalar::all(0));
 
   // Initialize planes
-  std::vector<Quadtree*> unfitNodes;
+  std::vector<Quadtree *> unfitNodes;
   for (Plane& plane : planes) {
     plane.image2dPoints = cv::Mat(cv::Size(cameraData.width, cameraData.height),
                                   CV_8U, cv::Scalar::all(0));
@@ -388,20 +400,17 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
   // Assign type to planes
   PlaneAnalysis::assignPlaneType(planes, cameraHeight);
   Plane *floor = new Plane();
-  bool   hasFloor = false;
-
-  cv::Mat restrictedArea(nonPlanePoints.topView.size(), CV_8U, cv::Scalar::all(0));
 
   // Set image areas and find floor height
   double maxObjectHeight = OBJECT_MAX_HEIGHT_ABOVE_FLOOR;
   double minObjectHeight = TYPICAL_FLOOR_HEIGHT;
   for (Plane& plane : planes) {
     for (const Quadtree *node : plane.nodes) {
-      plane.setImageArea(node->minBounds, node->maxBounds);
+      cv::rectangle(plane.image2dPoints, node->minBounds, node->maxBounds,
+                    cv::Scalar::all(255), cv::FILLED);
     }
     if (plane.type == PLANE_TYPE_FLOOR) {
       floor = &plane;
-      hasFloor = true;
       maxObjectHeight = -plane.position[Y] +
                         OBJECT_MAX_HEIGHT_ABOVE_FLOOR;
       minObjectHeight = -plane.position[Y];
@@ -527,11 +536,11 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
           cv::Point p4(coord[0] - margin, coord[1] + margin);
           std::vector<cv::Point> area {p1, p2, p3, p4 };
           if (!isWithinRestrictedArea &&
-              -point[Y] < minObjectHeight + MIN_ROBOT_HEIGHT + HEIGHT_DELTA) {
+              (-point[Y] < minObjectHeight + MIN_ROBOT_HEIGHT + HEIGHT_DELTA)) {
             cv::rectangle(restrictedArea, p1, p3, cv::Scalar(255), cv::FILLED);
           } else if (!isWithinRestrictedArea) {
             nonPlanePoints.insertHeightLimitedArea(-point[Y] - minObjectHeight,
-                                                    area, mutexObjects);
+                                                   area, mutexObjects);
           }
         }
       }
@@ -629,12 +638,14 @@ cv::Vec2d PlaneAnalysis::convertTopViewToMeters(const cv::Point& p)
 {
   double x = (p.x - MAX_DISTANCE / TOP_VIEW_DELTA / 2.0) * TOP_VIEW_DELTA;
   double y = (TOP_VIEW_HEIGHT - p.y) * TOP_VIEW_DELTA;
+
   return cv::Vec2d(x, y);
 }
 
 void PlaneAnalysis::convert2dTo3d(const cv::Vec3d& p, Plane& plane)
 {
   const cv::Vec2i coord = PlaneAnalysis::getTopViewCoordinates(p);
+
   cv::Point point(coord[0], coord[1]);
   cv::rectangle(plane.topView, point, point, cv::Scalar(255), cv::FILLED);
 }
@@ -709,8 +720,8 @@ void PlaneAnalysis::computePlaneContour(std::vector<Plane>& planes,
       // of pixel area within the contour. If close to zero, it is hollow
       cv::Mat contourImage(plane.topView.size(), CV_8U, cv::Scalar::all(0));
       cv::drawContours(contourImage, contours, i, 255, cv::FILLED);
-      if (plane.type != PLANE_TYPE_FLOOR &&
-          plane.type != PLANE_TYPE_OTHER) {
+      if ((plane.type != PLANE_TYPE_FLOOR) &&
+          (plane.type != PLANE_TYPE_OTHER)) {
         // Simplify area
         std::vector<cv::Point> approx;
         double epsilon = 0.005 * cv::arcLength(contour, true);
@@ -822,8 +833,9 @@ void PlaneAnalysis::printPlaneInformation(const Plane& plane)
 }
 
 void PlaneAnalysis::insertPlanePublisherInformation(
-  traversable_area_detection::HoughPlaneTransform& msg, const std::vector<Plane>& planes,
-  const bool includeNodeInformation)
+  traversable_area_detection::HoughPlaneTransform& msg,
+  const std::vector<Plane>                       & planes,
+  const bool                                       includeNodeInformation)
 {
   for (const Plane& plane : planes) {
     traversable_area_detection::Plane planeMsg;
@@ -831,7 +843,7 @@ void PlaneAnalysis::insertPlanePublisherInformation(
     planeMsg.type = PLANE_TYPE_STR[plane.type];
     planeMsg.no_of_nodes = plane.nodes.size();
     if (includeNodeInformation) {
-      for (Quadtree* node : plane.nodes) {
+      for (Quadtree *node : plane.nodes) {
         traversable_area_detection::Node nodeMsg;
         nodeMsg.id = node->id;
         nodeMsg.samples = node->samples;

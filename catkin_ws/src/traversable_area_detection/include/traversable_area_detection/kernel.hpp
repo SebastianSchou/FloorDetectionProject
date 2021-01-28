@@ -15,17 +15,17 @@ public:
 
   cv::Matx33d covarianceSpherical, covarianceSphericalInversed;
 
-  void computeKernelParameters()
+  bool computeKernelParameters()
   {
     cv::Matx33d jacobian;
-    cv::Vec3d n = cv::normalize(node->normal);
+    cv::Vec3d   n = cv::normalize(node->normal);
 
     // Jacobian Matrix calculation
-    double  epsilon = NONZERO;
+    double epsilon = NONZERO;
     cv::Vec3d p = n * rho;
-    double  w = square(p[X]) + square(p[Y]);
-    double  p2 = w + square(p[Z]);
-    double  sqrtW = std::sqrt(w);
+    double    w = square(p[X]) + square(p[Y]);
+    double    p2 = w + square(p[Z]);
+    double    sqrtW = std::sqrt(w);
 
     // Derivatives of p[X]*μx + p[Y]*μy + p[Z]*μz
     jacobian(X, X) = n[X];
@@ -53,7 +53,7 @@ public:
     gaussianPdfConstant = SQRTOFCUBIC2PI *
                           std::sqrt(std::abs(cv::determinant(
                                                covarianceSpherical)));
-    cv::Vec3d eigenvalues;
+    cv::Vec3d   eigenvalues;
     cv::Matx33d eigenvectors;
     cv::eigen(covarianceSpherical, eigenvalues, eigenvectors);
 
@@ -75,13 +75,15 @@ public:
     votingLimit = gaussianPdf(eigenvectors(X, MIN_EIGENVALUE_INDEX) * radius,
                               eigenvectors(Y, MIN_EIGENVALUE_INDEX) * radius,
                               eigenvectors(Z, MIN_EIGENVALUE_INDEX) * radius);
+    return votingLimit >= 0;
   }
 
   double gaussianPdf(const double rho, const double phi,
                      const double theta)
   {
-    cv::Vec3d displacement(rho, phi, theta);
-    cv::Scalar d = displacement.t() * covarianceSphericalInversed * displacement;
+    cv::Vec3d  displacement(rho, phi, theta);
+    cv::Scalar d = displacement.t() * covarianceSphericalInversed *
+                   displacement;
     return std::exp(-0.5 * d[0]) / gaussianPdfConstant;
   }
 };

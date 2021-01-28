@@ -94,8 +94,9 @@ static void planePubCallback(const std::string& file, const int waitTime)
   cv::destroyAllWindows();
 }
 
-static bool loadPictureCallback(traversable_area_detection::LoadPictureSrv::Request & req,
-                                traversable_area_detection::LoadPictureSrv::Response& rsp)
+static bool loadPictureCallback(
+  traversable_area_detection::LoadPictureSrv::Request & req,
+  traversable_area_detection::LoadPictureSrv::Response& rsp)
 {
   if (req.filename.empty()) {
     shutdownRos = true;
@@ -117,8 +118,9 @@ int loadPicture(int argc, char **argv, const std::string& filePath)
   ros::NodeHandle nh;
   srvLoadPicture = nh.advertiseService("load_picture_srv", loadPictureCallback);
   pubHoughPlaneTransform =
-    nh.advertise<traversable_area_detection::HoughPlaneTransform>("hough_plane_transform",
-                                                      QUEUE_SIZE);
+    nh.advertise<traversable_area_detection::HoughPlaneTransform>(
+      "hough_plane_transform",
+      QUEUE_SIZE);
   ros::spin();
   ros::shutdown();
   return EXIT_SUCCESS;

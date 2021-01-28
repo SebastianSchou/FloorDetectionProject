@@ -144,9 +144,10 @@ void DrawingFunctions::drawPlanesInQuadtree(cv::Mat   & image,
                   node.maxBounds * scale,
                   cv::Scalar::all(125),
                   1);
-    cv::Point center = (node.minBounds + (node.maxBounds - node.minBounds) / 2) * 4;
+    cv::Point center =
+      (node.minBounds + (node.maxBounds - node.minBounds) / 2) * 4;
     cv::putText(image, std::to_string(node.id), center - cv::Point(10, -7),
-                        cv::FONT_HERSHEY_PLAIN, 0.8, cv::Scalar::all(255));
+                cv::FONT_HERSHEY_PLAIN, 0.8, cv::Scalar::all(255));
     cv::addWeighted(image, 1.0, rect, 0.8, 0.0, image);
   }
   if (node.children != NULL) {
@@ -256,26 +257,28 @@ cv::Mat DrawingFunctions::drawTopView(const CameraData        & cameraData,
         for (const auto& heightArea : plane.heightLimitedAreas) {
           cv::drawContours(im, heightArea.second, -1, cv::Scalar::all(125),
                            cv::FILLED);
+
           /*
-          for (size_t i = 0; i < heightArea.second.size(); i++) {
-            cv::Point center = heightArea.second[i];
-            std::vector<std::vector<cv::Point>> area =
+             for (size_t i = 0; i < heightArea.second.size(); i++) {
+             cv::Point center = heightArea.second[i];
+             std::vector<std::vector<cv::Point>> area =
               {{center + cv::Point(-4, -4), center + cv::Point(4, -4),
                 center + cv::Point(4, 4), center + cv::Point(-4, 4)}};
 
-            cv::drawContours(im, area, 0, cv::Scalar::all(125),
+             cv::drawContours(im, area, 0, cv::Scalar::all(125),
                              cv::FILLED);
-            center.y += 3;
-            center.x -= 5;
-            int h = heightArea.first * 100;
-            cv::putText(im, std::to_string(h), center,
+             center.y += 3;
+             center.x -= 5;
+             int h = heightArea.first * 100;
+             cv::putText(im, std::to_string(h), center,
                         cv::FONT_HERSHEY_PLAIN, 0.5, cv::Scalar::all(0));
-          }
-          */
+             }
+           */
         }
       }
     } else {
-      im.setTo(plane.color, plane.topView);
+      im.setTo(plane.color,
+               plane.topView);
     }
   }
   im.setTo(cv::Scalar::all(255), nonPlanePoints);
@@ -292,7 +295,8 @@ cv::Mat DrawingFunctions::drawSideView(const CameraData& cameraData,
     [&](cv::Vec3d& p, const int *position) {
     const int r = position[0], c = position[1];
     if (plane.image2dPoints.at<uchar>(r, c) > 0) {
-      int row = std::round(p[1] / SIDE_VIEW_DELTA) +
+      int row = std::round(
+        p[1] / SIDE_VIEW_DELTA) +
                 (SIDE_VIEW_HEIGHT / 2.0) / SIDE_VIEW_DELTA - meanHeight / SIDE_VIEW_DELTA;
       int col = std::round(p[2] / SIDE_VIEW_DELTA);
       int margin = 0;

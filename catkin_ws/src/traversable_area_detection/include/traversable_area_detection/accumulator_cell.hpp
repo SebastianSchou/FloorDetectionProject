@@ -10,9 +10,8 @@ public:
   AccumulatorCell()
   {
     lastVoteCount = 0.0;
-    lastVotedNote = NULL;
+    lastVotedNode = NULL;
     visited = false;
-    top = false;
     voted = false;
     peak = false;
     votes = 0.0;
@@ -24,12 +23,12 @@ public:
 
   bool hasBeenVotedForBefore(Quadtree *node)
   {
-    return lastVotedNote == node;
+    return lastVotedNode == node;
   }
 
   void setAsVotedFor(Quadtree *node)
   {
-    lastVotedNote = node;
+    lastVotedNode = node;
     this->votes++;
   }
 
@@ -40,8 +39,8 @@ public:
 
   std::set<Quadtree *> votedNodes;
 
-  Quadtree *lastVotedNote;
-  bool peak, visited, voted, top;
+  Quadtree *lastVotedNode;
+  bool peak, visited, voted;
   double lastVoteCount, votes;
   double thetaIndex;
   int phiIndex, rhoIndex;

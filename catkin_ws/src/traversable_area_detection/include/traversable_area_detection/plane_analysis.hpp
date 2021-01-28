@@ -32,13 +32,18 @@ bool   isFaultyObject(const cv::Mat& m,
 cv::Vec2i getTopViewCoordinates(const cv::Vec3d& p);
 void      convert2dTo3d(const cv::Vec3d& p, Plane& plane);
 cv::Vec2d convertTopViewToMeters(const cv::Point& p);
-void      calculateNormalAndStandardDeviation(Plane& plane, std::vector<Quadtree*>& unfitNodes);
-bool      isWithinTwoStandardDeviations(const Plane& plane1, const Plane& plane2);
-bool      isWithinTwoStandardDeviations(const Plane& plane, const Quadtree& node);
+void      calculateNormalAndStandardDeviation(Plane                  & plane,
+                                              std::vector<Quadtree *>& unfitNodes);
+bool      isWithinTwoStandardDeviations(const Plane& plane1,
+                                        const Plane& plane2);
+bool      isWithinTwoStandardDeviations(const Plane   & plane,
+                                        const Quadtree& node);
 float     getThetaDifference(const Plane& plane1, const Plane& plane2);
 float     getThetaDifference(const Plane& plane, const Quadtree& node);
-void      mergeSimilarPlanes(std::vector<Plane>& planes, std::vector<Quadtree*>& unfitNodes);
-void      matchUnfitNodes(std::vector<Plane>& planes, std::vector<Quadtree*>& unfitNodes);
+void      mergeSimilarPlanes(std::vector<Plane>     & planes,
+                             std::vector<Quadtree *>& unfitNodes);
+void      matchUnfitNodes(std::vector<Plane>     & planes,
+                          std::vector<Quadtree *>& unfitNodes);
 void      computePlaneContour(std::vector<Plane>& planes,
                               Plane             & nonPlanePoints);
 float     leastSquareError(const Plane& plane, const Quadtree& node);
@@ -46,7 +51,8 @@ void      printPlanesInformation(const std::vector<Plane>& planes);
 void      printPlaneInformation(const Plane& plane);
 void      cleanUpHeightLimitedAreas(Plane& nonPlanePoints, Plane& floor);
 void      insertPlanePublisherInformation(
-  traversable_area_detection::HoughPlaneTransform& msg, const std::vector<Plane>& planes,
-  const bool includeNodeInformation = false);
+  traversable_area_detection::HoughPlaneTransform& msg,
+  const std::vector<Plane>                       & planes,
+  const bool                                       includeNodeInformation = false);
 };
 #endif // PLANE_ANALYSIS_HPP

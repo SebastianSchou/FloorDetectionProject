@@ -129,7 +129,7 @@ void Quadtree::PCA()
   // Get eigenvalues and eigenvectors. They are sorted such that eigenvalue 1
   // is largest and eigenvalue 3 is smallest. Value and vector correspond
   // w.r.t. index
-  cv::Vec3d eigenvalues;
+  cv::Vec3d   eigenvalues;
   cv::Matx33d eigenvectors;
   cv::eigen(covariance, eigenvalues, eigenvectors);
 
