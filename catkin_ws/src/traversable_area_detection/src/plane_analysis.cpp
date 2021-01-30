@@ -216,15 +216,17 @@ void PlaneAnalysis::calculateNormalAndStandardDeviation(
   plane.rhoStd = std::sqrt(rhoStd / plane.nodes.size());
 
   // Remove nodes which does not fit within two standard deviations
-  for (size_t i = 0; i < plane.nodes.size(); i++) {
-    Quadtree *node = plane.nodes[i];
-    if (!PlaneAnalysis::isWithinTwoStandardDeviations(plane, *node)) {
-      unfitNodes.push_back(node);
-      plane.nodes.erase(plane.nodes.begin() + i);
-      i--;
-      plane.samples -= node->samples;
-      plane.rootRepresentativeness -= node->rootRepresentativeness;
-      continue;
+  if (plane.nodes.size() > 1) {
+    for (size_t i = 0; i < plane.nodes.size(); i++) {
+      Quadtree *node = plane.nodes[i];
+      if (!PlaneAnalysis::isWithinTwoStandardDeviations(plane, *node)) {
+        unfitNodes.push_back(node);
+        plane.nodes.erase(plane.nodes.begin() + i);
+        i--;
+        plane.samples -= node->samples;
+        plane.rootRepresentativeness -= node->rootRepresentativeness;
+        continue;
+      }
     }
   }
 }
