@@ -15,6 +15,7 @@ MAX_DISTANCE_DIFFERENCE = 2.0 * 0.08
 
 def hptCallback(data):
 	noOfPlanes = len(data.planes)
+	maxDistance = 0
 	if (noOfPlanes == 0):
 		return
 	noOfSubplotRows = 2
@@ -30,6 +31,7 @@ def hptCallback(data):
 		phiA = []
 		thetaA = []
 		for node in plane.nodes:
+			maxDistance = max(maxDistance, node.rho)
 			rhoDiff = abs(node.rho - plane.distance)
 			phiDiff = abs(node.phi - plane.phi) * 180.0 / math.pi
 			thetaDiff = abs(node.theta - plane.theta)
@@ -96,6 +98,39 @@ def hptCallback(data):
 	plt.grid(True)
 	for i, txt in enumerate(planeIds):
 		plt.annotate(txt, (xA[i], yA[i]))
+
+	plt.figure(104)
+	plt.subplots_adjust(hspace = 0.4)
+	subplotNo = 0
+	for plane in data.planes:
+		subplotNo += 1
+		if (noOfPlanes > 1):
+			plt.subplot(noOfSubplotRows, noOfSubplotCols, subplotNo)
+		rhoA = []
+		phiA = []
+		thetaA = []
+		for node in plane.nodes:
+			rhoDiff = abs(node.rho - plane.distance)
+			phiDiff = abs(node.phi - plane.phi) * 180.0 / math.pi
+			thetaDiff = abs(node.theta - plane.theta)
+			thetaDiff = 2 * math.pi - thetaDiff if thetaDiff > math.pi else thetaDiff
+			thetaDiff *= 180.0 / math.pi
+			rhoA.append(node.rho)
+			phiA.append(node.phi * 180.0 / math.pi)
+			thetaA.append(node.theta * 180.0 / math.pi)
+		#plt.axhline(2 * math.sqrt(np.sum(np.square(phiA)) / len(plane.nodes)))
+		#plt.axvline(2 * math.sqrt(np.sum(np.square(thetaA)) / len(plane.nodes)))
+		plt.scatter(thetaA, phiA, c=rhoA, cmap='viridis')
+		plt.clim(0, maxDistance)
+		plt.xlabel(r"$\Delta\theta$ [degrees]")
+		plt.ylabel(r"$\Delta\phi$ [degrees]")
+		plt.title("Plane %d, type %s" % (plane.id, plane.type))
+		plt.grid(True)
+	plt.subplots_adjust(bottom=0.1, right=0.8, top=0.9)
+	cax = plt.axes([0.85, 0.1, 0.025, 0.8])
+	cbar = plt.colorbar(cax=cax)
+	cbar.ax.get_yaxis().labelpad = 15
+	cbar.ax.set_ylabel(r"$\Delta\rho$ [m]", rotation=270)
 
 	plt.show()
 		
