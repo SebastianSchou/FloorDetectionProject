@@ -25,7 +25,7 @@
 #define MAX_PLANE_AREA_FILL 1.0                                 // [m^2]
 #define MAX_OBJECT_DISTANCE_DIFFERENCE 0.2                      // [m]
 #define MIN_CONTOUR_SIZE 3                                      // [points]
-#define MAX_DISTANCE_TO_NODE 5.0                                // [m]
+#define MAX_DISTANCE_TO_NODE 2.0                                // [m]
 
 bool PlaneAnalysis::isGround(const Plane& currentFloor, const Plane& plane,
                              const float cameraHeight)
@@ -91,6 +91,7 @@ void PlaneAnalysis::assignPlaneType(std::vector<Plane>& planes,
   Plane *floor = new Plane();
   Plane *ceiling = new Plane();
   floor->rho = 0.0;
+  ceiling->rho = 0.0;
 
   // Assign floor, walls and ceiling
   for (Plane& plane : planes) {
@@ -467,12 +468,10 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
           // Get the distance to the closest node
           double distanceToNode = MAX_DISTANCE_TO_NODE;
           for (Quadtree *node : plane.nodes) {
-            if (distanceToNode >= MAX_DISTANCE_TO_NODE) {
-              distanceToNode =
-                std::min(distanceToNode,
-                         PlaneAnalysis::getDistanceToNode(cameraData.data3d,
-                                                          *node, r, c, point));
-            }
+            distanceToNode =
+              std::min(distanceToNode,
+                       PlaneAnalysis::getDistanceToNode(cameraData.data3d,
+                                                        *node, r, c, point));
           }
 
           // If distance to node is too big, skip this plane
@@ -482,7 +481,7 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
 
           // Add a scale. The further away a point is, the more precise does
           // the points normal vector has to be
-          double scale = 1.0 - 0.5 * distanceToNode / MAX_DISTANCE_TO_NODE;
+          double scale = 1.0 - distanceToNode / MAX_DISTANCE_TO_NODE;
 
           // Calculate the difference between the plane normal and the two
           // found normals. If the largest difference is too large, ignore
