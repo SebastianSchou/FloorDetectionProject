@@ -78,7 +78,6 @@ public:
     this->satYZ = Sat(height, width);
     this->satZZ = Sat(height, width);
     this->satSamples = Sat(height, width);
-    this->satGradient = Sat(height, width);
   }
 
   Sat satX;
@@ -91,7 +90,6 @@ public:
   Sat satYZ;
   Sat satZZ;
   Sat satSamples;
-  Sat satGradient;
 };
 
 #endif // SUMMED_AREA_TABLE_HPP
