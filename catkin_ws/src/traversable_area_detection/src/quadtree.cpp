@@ -41,12 +41,8 @@ Quadtree::~Quadtree()
 
 void Quadtree::divideIntoQuadrants()
 {
-  // If there are too few samples in the image to analyze, ignore it
+  // Get amount of samples in node
   samples = root->sat.satSamples.getArea(minBounds, maxBounds);
-  if (samples < root->getMinSamplesInNode()) {
-    root->nonPlanes.push_back(this);
-    return;
-  }
 
   // Only perform PCA analysis if sample density is above its limit and
   // the sum of the gradient does not exceed its limit
