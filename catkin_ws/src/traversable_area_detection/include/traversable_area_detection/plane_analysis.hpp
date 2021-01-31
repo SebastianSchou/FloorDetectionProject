@@ -6,11 +6,11 @@
 
 namespace PlaneAnalysis {
 void   removeSmallPlanes(std::vector<Plane>& planes);
-bool   isGround(const Plane& currentFloor, const Plane& plane,
+bool   isGround(const Plane* currentFloor, const Plane& plane,
                 const float cameraHeight);
 bool   isWall(const Plane& plane);
 bool   isBetterWall(const Plane& currentWall, const Plane& plane);
-bool   isCeiling(const Plane& currentCeil, const Plane& plane);
+bool   isCeiling(const Plane* currentCeil, const Plane& plane);
 void   assignPlaneType(std::vector<Plane>& planes,
                        const float         cameraHeight = 0.0);
 double getAngleDifference(const Plane& plane1, const Plane& plane2);

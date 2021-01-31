@@ -40,6 +40,11 @@ public:
 
   ~HoughPlaneTransform()
   {
+    delete accumulator;
+    for (Plane& plane : planes) {
+      plane.image2dPoints.release();
+      plane.topView.release();
+    }
   }
 
   Quadtree root;

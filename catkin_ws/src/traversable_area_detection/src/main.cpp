@@ -68,6 +68,12 @@ static int planePubCallback(CameraData& cameraData, float& timeSum,
     if (cameraData.loadColorImage_) {
       cv::imshow("Realsense plane points cleaned", cleanedPlanePoints);
     }
+
+    // Release cv::Mat memory
+    topView.release();
+    cleanedPlanePoints.release();
+    nonPlanePoints.topView.release();
+    nonPlanePoints.image2dPoints.release();
   }
   msg.success = true;
   pubHoughPlaneTransformLive.publish(msg);
@@ -75,6 +81,13 @@ static int planePubCallback(CameraData& cameraData, float& timeSum,
     cv::imshow("Realsense color normal", cameraData.normalColorImage);
   }
   key = cv::waitKey(1);
+
+  // Release cv::Mat memory
+  cameraData.normalColorImage.release();
+  cameraData.depthAlignedColorImage.release();
+  cameraData.depthData.release();
+  cameraData.data3d.release();
+
   return 0;
 }
 

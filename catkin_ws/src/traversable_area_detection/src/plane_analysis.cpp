@@ -27,7 +27,7 @@
 #define MIN_CONTOUR_SIZE 3                                      // [points]
 #define MAX_DISTANCE_TO_NODE 2.0                                // [m]
 
-bool PlaneAnalysis::isGround(const Plane& currentFloor, const Plane& plane,
+bool PlaneAnalysis::isGround(const Plane* currentFloor, const Plane& plane,
                              const float cameraHeight)
 {
   // Checks if the plane is more likely to be the ground than the current
@@ -36,10 +36,11 @@ bool PlaneAnalysis::isGround(const Plane& currentFloor, const Plane& plane,
   //   else is within height limit and further away than current floor
   // - Incline of the plane is (mostly) horizontal
   // - Y-direction of the normal is positive (exclude ceilings)
+  float currentFloorRho = (currentFloor == NULL) ? 0.0 : currentFloor->rho;
   if (cameraHeight == 0) {
     return (plane.rho > MIN_FLOOR_DISTANCE) &&
            (plane.rho < MAX_FLOOR_DISTANCE) &&
-           (currentFloor.rho < plane.rho) &&
+           (currentFloorRho < plane.rho) &&
            (std::abs(std::abs(plane.phi) - CV_PI / 2.0) <
             MAX_INCLINE_RADIANS) &&
            (std::abs(std::abs(plane.theta) - CV_PI / 2.0) <
@@ -47,7 +48,7 @@ bool PlaneAnalysis::isGround(const Plane& currentFloor, const Plane& plane,
            (plane.normal[Y] > 0);
   } else {
     return (std::abs(cameraHeight - plane.rho) <
-            std::abs(cameraHeight - currentFloor.rho)) &&
+            std::abs(cameraHeight - currentFloorRho)) &&
            (std::abs(std::abs(plane.phi) - CV_PI / 2.0) <
             MAX_INCLINE_RADIANS) &&
            (std::abs(std::abs(plane.theta) - CV_PI / 2.0) <
@@ -70,14 +71,15 @@ bool PlaneAnalysis::isBetterWall(const Plane& currentWall, const Plane& plane)
          plane.rho - currentWall.rho <= MAX_REPLACE_WALL_DISTANCE;
 }
 
-bool PlaneAnalysis::isCeiling(const Plane& currentCeil, const Plane& plane)
+bool PlaneAnalysis::isCeiling(const Plane* currentCeil, const Plane& plane)
 {
   // Checks if the plane is more likely to be the ceiling than the current
   // ceiling by doing the following checks:
   // - Distance to the plane is further away than current ceiling
   // - Incline of the plane is (mostly) horizontal
   // - Y-direction of the normal is negative
-  return (currentCeil.rho < plane.rho) &&
+  float currentCeilRho = (currentCeil == NULL) ? 0.0 : currentCeil->rho;
+  return (currentCeilRho < plane.rho) &&
          (std::abs(std::abs(plane.phi) - CV_PI / 2.0) < MAX_INCLINE_RADIANS) &&
          (std::abs(std::abs(plane.theta) - CV_PI / 2.0) <
           MAX_INCLINE_RADIANS) &&
@@ -88,15 +90,15 @@ void PlaneAnalysis::assignPlaneType(std::vector<Plane>& planes,
                                     const float         cameraHeight)
 {
   std::vector<Plane *> walls;
-  Plane *floor = new Plane();
-  Plane *ceiling = new Plane();
-  floor->rho = 0.0;
-  ceiling->rho = 0.0;
+  Plane *floor = NULL;
+  Plane *ceiling = NULL;
 
   // Assign floor, walls and ceiling
   for (Plane& plane : planes) {
-    if (PlaneAnalysis::isGround(*floor, plane, cameraHeight)) {
-      floor->type = PLANE_TYPE_OTHER;
+    if (PlaneAnalysis::isGround(floor, plane, cameraHeight)) {
+      if (floor != NULL) {
+        floor->type = PLANE_TYPE_OTHER;
+      }
       floor = &plane;
       floor->type = PLANE_TYPE_FLOOR;
     } else if (PlaneAnalysis::isWall(plane)) {
@@ -115,8 +117,10 @@ void PlaneAnalysis::assignPlaneType(std::vector<Plane>& planes,
         plane.type = PLANE_TYPE_WALL;
         walls.push_back(&plane);
       }
-    } else if (PlaneAnalysis::isCeiling(*ceiling, plane)) {
-      ceiling->type = PLANE_TYPE_OTHER;
+    } else if (PlaneAnalysis::isCeiling(ceiling, plane)) {
+      if (ceiling != NULL) {
+        ceiling->type = PLANE_TYPE_OTHER;
+      }
       ceiling = &plane;
       ceiling->type = PLANE_TYPE_CEILING;
     }
@@ -402,7 +406,7 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
 
   // Assign type to planes
   PlaneAnalysis::assignPlaneType(planes, cameraHeight);
-  Plane *floor = new Plane();
+  Plane *floor = NULL;
 
   // Set image areas and find floor height
   double maxObjectHeight = OBJECT_MAX_HEIGHT_ABOVE_FLOOR;
@@ -587,7 +591,7 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
     if (plane.type == PLANE_TYPE_CEILING) {
       continue;
     }
-    if (plane.type != PLANE_TYPE_FLOOR) {
+    if (floor != NULL && plane.type != PLANE_TYPE_FLOOR) {
       floor->topView -= plane.topView;
     }
     cv::morphologyEx(plane.topView, plane.topView,
@@ -595,7 +599,13 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
   }
 
   // Remove spots with objects close to floor level
-  floor->topView -= restrictedArea;
+  if (floor != NULL) {
+    floor->topView -= restrictedArea;
+  }
+
+  // Release cv::Mat memory
+  restrictedArea.release();
+  stucturingElement.release();
 
   return nonPlanePoints;
 }
@@ -687,6 +697,7 @@ void PlaneAnalysis::cleanUpHeightLimitedAreas(Plane& nonPlanePoints,
     cv::findContours(heightIm, contours, cv::RETR_TREE,
                      cv::CHAIN_APPROX_TC89_KCOS);
     floor.heightLimitedAreas[x.first] = contours;
+    heightIm.release();
   }
 }
 
@@ -731,6 +742,7 @@ void PlaneAnalysis::computePlaneContour(std::vector<Plane>& planes,
         plane.restrictedAreas.push_back(approx);
       }
       bool isHollow = cv::mean(plane.topView, contourImage)[0] < 125.0;
+      contourImage.release();
 
       // Get center
       auto m = cv::moments(contour);

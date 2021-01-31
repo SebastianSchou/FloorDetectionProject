@@ -5,7 +5,7 @@
 
 #define EXIT_SUCCESS 0
 #define EXIT_ERROR -1
-#define QUEUE_SIZE 10
+#define QUEUE_SIZE 1
 
 static ros::ServiceServer srvLoadPicture;
 static ros::Publisher     pubHoughPlaneTransform;
@@ -86,12 +86,26 @@ static void planePubCallback(const std::string& file, const int waitTime)
     cv::imshow("Realsense plane quadtree", onlyQuadtree);
     cv::imshow("Realsense plane points rough",
                cameraData.depthAlignedColorImage);
+
+    // Release cv::Mat memory
+    onlyQuadtree.release();
+    cleanedPlanePoints.release();
+    topView.release();
+    sideView.release();
+    nonPlanePoints.topView.release();
+    nonPlanePoints.image2dPoints.release();
   }
   msg.success = true;
   pubHoughPlaneTransform.publish(msg);
   cv::imshow("Realsense color normal", cameraData.normalColorImage);
   cv::waitKey(waitTime);
   cv::destroyAllWindows();
+
+  // Release cv::Mat memory
+  cameraData.normalColorImage.release();
+  cameraData.depthAlignedColorImage.release();
+  cameraData.depthData.release();
+  cameraData.data3d.release();
 }
 
 static bool loadPictureCallback(
