@@ -57,16 +57,6 @@ public:
     // Get nodes representing the plane
     for (size_t i = 0; i < nodes.size(); i++) {
       Quadtree *node = nodes[i];
-      if (node->samples < MIN_INDEPENDENT_NODE_SIZE) {
-        if (!hasNeighbor(node)) {
-          if (nodes.size() <= 1) {
-            return false;
-          }
-          nodes.erase(nodes.begin() + i);
-          i--;
-          continue;
-        }
-      }
       bool skip = false;
       if (planes.size() > 0) {
         for (Plane& plane : planes) {

@@ -44,6 +44,7 @@ void      mergeSimilarPlanes(std::vector<Plane>     & planes,
                              std::vector<Quadtree *>& unfitNodes);
 void      matchUnfitNodes(std::vector<Plane>     & planes,
                           std::vector<Quadtree *>& unfitNodes);
+void      removeStandAloneNodes(std::vector<Plane>& planes);
 void      computePlaneContour(std::vector<Plane>& planes,
                               Plane             & nonPlanePoints);
 float     leastSquareError(const Plane& plane, const Quadtree& node);

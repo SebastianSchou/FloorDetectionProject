@@ -368,6 +368,24 @@ void PlaneAnalysis::matchUnfitNodes(std::vector<Plane>     & planes,
   }
 }
 
+void PlaneAnalysis::removeStandAloneNodes(std::vector<Plane>& planes)
+{
+  for (Plane& plane : planes) {
+    for (size_t i = 0; i < plane.nodes.size(); i++) {
+      Quadtree *node = plane.nodes[i];
+      if (node->samples < MIN_INDEPENDENT_NODE_SIZE) {
+        if (!plane.hasNeighbor(node)) {
+          plane.samples -= node->samples;
+          plane.rootRepresentativeness -= node->rootRepresentativeness;
+          plane.nodes.erase(plane.nodes.begin() + i);
+          i--;
+          continue;
+        }
+      }
+    }
+  }
+}
+
 Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
                                         const CameraData  & cameraData,
                                         const double        cameraHeight)
@@ -400,6 +418,9 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
 
   // Match unfit nodes
   PlaneAnalysis::matchUnfitNodes(planes, unfitNodes);
+
+  // Remove lonely nodes
+  PlaneAnalysis::removeStandAloneNodes(planes);
 
   // Remove planes which has too few samples
   PlaneAnalysis::removeSmallPlanes(planes);
