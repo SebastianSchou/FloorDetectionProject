@@ -4,19 +4,32 @@ void DrawingFunctions::drawQuadtreeBorders(cv::Mat   & image,
                                            Quadtree  & node,
                                            CameraData& cameraData)
 {
-  if (node.isPlane) {
-    cv::rectangle(image,
-                  node.minBounds * cameraData.filterVariables.decimationScaleFactor,
-                  node.maxBounds * cameraData.filterVariables.decimationScaleFactor,
-                  cv::Scalar(0, 0, 255),
-                  3);
-  } else {
-    cv::rectangle(image,
-                  node.minBounds * cameraData.filterVariables.decimationScaleFactor,
-                  node.maxBounds * cameraData.filterVariables.decimationScaleFactor,
-                  cv::Scalar(0, 0, 255),
-                  1);
+  float scale = cameraData.filterVariables.decimationScaleFactor;
+
+  if ((node.children == NULL) && (node.isPlane || (node.sampleDensity < 0.9))) {
+    cv::Scalar color;
+    if (node.isPlane) {
+      color = cv::Scalar(0, 0, 255);
+    } else if (node.sampleDensity < 0.9) {
+      color = cv::Scalar(0, 255, 0);
+    }
+    cv::Mat rect(image.rows, image.cols, CV_8UC3, cv::Scalar::all(0));
+    cv::rectangle(rect,
+                  node.minBounds * scale,
+                  node.maxBounds * scale,
+                  color,
+                  cv::FILLED);
+    cv::Point center =
+      (node.minBounds + (node.maxBounds - node.minBounds) / 2) * 4;
+    cv::putText(image, std::to_string(node.id), center - cv::Point(10, -7),
+                cv::FONT_HERSHEY_PLAIN, 0.8, cv::Scalar::all(255));
+    cv::addWeighted(image, 1.0, rect, 0.5, 0.0, image);
   }
+  cv::rectangle(image,
+                node.minBounds * scale,
+                node.maxBounds * scale,
+                cv::Scalar::all(125),
+                1);
   if (node.children != NULL) {
     for (int i = 0; i < 4; i++) {
       drawQuadtreeBorders(image, node.children[i], cameraData);
@@ -307,4 +320,16 @@ cv::Mat DrawingFunctions::drawSideView(const CameraData& cameraData,
   }
     );
   return im;
+}
+
+void DrawingFunctions::getObjectImage(cv::Mat      & im,
+                                      const cv::Mat& image)
+{
+  cv::Mat im2(image.size(), CV_8UC3, cv::Scalar::all(0));
+  im2.setTo(cv::Scalar(0, 0, 255), image);
+  cv::Mat stucturingElement = cv::getStructuringElement(cv::MORPH_RECT,
+                                                        cv::Size(3, 3));
+  cv::morphologyEx(im2, im2, cv::MORPH_CLOSE, stucturingElement);
+  cv::resize(im2, im2, im.size());
+  cv::addWeighted(im, 1.0, im2, 0.8, 0.0, im);
 }

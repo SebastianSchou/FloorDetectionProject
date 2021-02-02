@@ -29,6 +29,7 @@ cv::Mat drawTopView(const CameraData        & cameraData,
                     const std::vector<Plane>& planes,
                     const cv::Mat           & nonPlanePoints);
 cv::Mat drawSideView(const CameraData& cameraData, const Plane& plane);
+void    getObjectImage(cv::Mat& im, const cv::Mat& image);
 };
 
 #endif // DRAWING_FUNCTIONS_HPP
