@@ -26,6 +26,7 @@
 #define MAX_OBJECT_DISTANCE_DIFFERENCE 0.2                      // [m]
 #define MIN_CONTOUR_SIZE 3                                      // [points]
 #define MAX_DISTANCE_TO_NODE 2.0                                // [m]
+#define MIN_PLANE_SAMPLE_SIZE_UNFIT_NODES 1000
 
 bool PlaneAnalysis::isGround(const Plane* currentFloor, const Plane& plane,
                              const float cameraHeight)
@@ -346,6 +347,21 @@ void PlaneAnalysis::matchUnfitNodes(std::vector<Plane>     & planes,
   //  - Is within two standard deviations or has similar normal and distance
   //  - If lsqe is small enough, append it plane even if above requirement is
   //    not met
+
+  // Planes which are small has all of their nodes removed. This ensures that
+  // small planes are strong and not just a bundle of erroneous nodes
+  for (Plane& plane : planes) {
+    if (plane.samples < MIN_PLANE_SAMPLE_SIZE_UNFIT_NODES) {
+      for (size_t i = 0; i < plane.nodes.size(); i++) {
+        plane.samples -= plane.nodes[i]->samples;
+        plane.rootRepresentativeness -= plane.nodes[i]->rootRepresentativeness;
+        unfitNodes.push_back(plane.nodes[i]);
+        plane.nodes.erase(plane.nodes.begin() + i);
+        i--;
+      }
+    }
+  }
+
   for (Quadtree *node : unfitNodes) {
     Plane *bestFit;
     float  bestValue = 1.0;
