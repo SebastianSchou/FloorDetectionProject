@@ -68,24 +68,21 @@ inline void peakDetection(std::vector<Plane>       & planes,
   for (AccumulatorCell *cell : peakCells) {
     Plane plane;
 
+    // Get spherical coordinate values
     accum.getValues(plane.theta, plane.phi, plane.rho, cell->thetaIndex,
                     cell->phiIndex, cell->rhoIndex);
 
-    // Get normal vector and plane position
-    plane.normal[0] = std::sin(plane.phi) * std::cos(plane.theta);
-    plane.normal[1] = std::sin(plane.phi) * std::sin(plane.theta);
-    plane.normal[2] = std::cos(plane.phi);
-    plane.position = plane.normal * plane.rho;
-
+    // Move all nodes from the cell to the plane
     std::move(cell->votedNodes.begin(), cell->votedNodes.end(),
               std::inserter(plane.nodes, plane.nodes.end()));
-    plane.rootRepresentativeness = 0;
 
+    // Set plane values from cell
     plane.votes = cell->votes;
     plane.thetaIndex = cell->thetaIndex;
     plane.phiIndex = cell->phiIndex;
     plane.rhoIndex = cell->rhoIndex;
     plane.id = planeId++;
+    plane.rootRepresentativeness = 0;
     if (plane.computePlaneParameters(planes)) {
       planes.push_back(plane);
     }

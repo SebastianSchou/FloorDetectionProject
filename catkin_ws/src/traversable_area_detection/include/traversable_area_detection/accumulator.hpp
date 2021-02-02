@@ -12,9 +12,6 @@ public:
               const float rhoDeltaValue, const float phiDeltaValue);
   ~Accumulator();
 
-  std::set<Quadtree *>        convolutionNodes(const double thetaIndex,
-                                               const short  phiIndex,
-                                               const short  rhoIndex);
   std::set<AccumulatorCell *> getNeighborCells(const double thetaIndex,
                                                const short  phiIndex,
                                                const short  rhoIndex,
@@ -23,14 +20,10 @@ public:
                       const short  phi,
                       const short  rho);
 
-  void   setVisited(const double thetaIndex,
-                    const short  phiIndex,
-                    const short  rhoIndex);
   void   initialize(double thetaIndex, int phiIndex);
   double convolutionValue(const double thetaIndex,
                           const int    phiIndex,
                           const int    rhoIndex);
-  void   setVisited(std::vector<AccumulatorCell *>& neighbors);
   double deltaTheta(const double& phiIndex);
   double deltaThetaIndex(const double& phiIndex);
   void   processTheta(double& thetaIndex);
@@ -49,10 +42,6 @@ public:
   void getValues(double& theta, double& phi, double& rho,
                  const double& thetaIndex, const int& phiIndex,
                  const int& rhoIndex);
-  void sphericalToCartesianCoordinates(cv::Vec3d   & normal,
-                                       const double& theta,
-                                       const double& phi,
-                                       const double& rho);
   double fixTheta(double theta, const int phi);
 
   std::vector<std::vector<AccumulatorCellArray *> > data;

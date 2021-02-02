@@ -1,5 +1,18 @@
 #include "traversable_area_detection/accumulator.hpp"
 
+static const short neighborOffsetTheta[26] =
+{ 0,   0,  0,  0, +1, -1,                         // directly linked
+  +1, -1, +1, -1, +1, -1, -1, +1, 0, 0, 0, 0,     // semi directly linked
+  +1, +1, +1, -1, +1, -1, -1, -1 };               // diagonally linked
+static const short neighborOffsetPhi[26] =
+{ +1, -1,  0,  0,  0,  0,                         // directly linked
+  +1, -1, -1, +1,  0,  0,  0, 0, +1, -1, -1, +1,  // semi directly linked
+  +1, +1, -1, +1, -1, -1, +1, -1 };               // diagonally linked
+static const short neighborOffsetRho[26] =
+{ 0,   0, +1, -1,  0,  0,                         // directly linked
+  0,   0,  0,  0, +1, -1, +1, -1, +1, -1, +1, -1, // semi directly linked
+  +1, -1, +1, +1, -1, +1, -1, -1 };               // diagonally linked
+
 Accumulator::Accumulator(const double maxDistance,
                          const double maxPhiAngle,
                          const float  rhoDeltaValue,
@@ -38,30 +51,6 @@ Accumulator::~Accumulator()
   }
 }
 
-std::set<Quadtree *> Accumulator::convolutionNodes(const double thetaIndex,
-                                                   const short  phiIndex,
-                                                   const short  rhoIndex)
-{
-  std::set<Quadtree *> nodes;
-  std::set<AccumulatorCell *> neighbors = getNeighborCells(thetaIndex, phiIndex,
-                                                           rhoIndex, 26);
-  for (AccumulatorCell *cell : neighbors) {
-    std::move(cell->votedNodes.begin(), cell->votedNodes.end(),
-              std::inserter(nodes, nodes.end()));
-  }
-  return nodes;
-}
-
-void Accumulator::setVisited(const double thetaIndex, const short phiIndex,
-                             const short rhoIndex)
-{
-  std::set<AccumulatorCell *> neighbors = getNeighborCells(thetaIndex, phiIndex,
-                                                           rhoIndex, 27);
-  for (AccumulatorCell *cell : neighbors) {
-    cell->visited = true;
-  }
-}
-
 void Accumulator::initialize(double thetaIndex, int phiIndex)
 {
   int t = getThetaIndex(thetaIndex, phiIndex);
@@ -85,13 +74,6 @@ double Accumulator::convolutionValue(const double thetaIndex,
     accumulatorValue += n->votes * 0.1333;
   }
   return accumulatorValue;
-}
-
-void Accumulator::setVisited(std::vector<AccumulatorCell *>& neighbors)
-{
-  for (AccumulatorCell *cell : neighbors) {
-    cell->visited = true;
-  }
 }
 
 double Accumulator::deltaTheta(const double& phiIndex)
@@ -151,19 +133,6 @@ std::set<AccumulatorCell *> Accumulator::getNeighborCells(
   } else {
     theta = thetaIndex;
   }
-
-  static const short neighborOffsetTheta[26] =
-  { 0,   0,  0,  0, +1, -1,                         // directly linked
-    +1, -1, +1, -1, +1, -1, -1, +1, 0, 0, 0, 0,     // semi directly linked
-    +1, +1, +1, -1, +1, -1, -1, -1 };               // diagonally linked
-  static const short neighborOffsetPhi[26] =
-  { +1, -1,  0,  0,  0,  0,                         // directly linked
-    +1, -1, -1, +1,  0,  0,  0, 0, +1, -1, -1, +1,  // semi directly linked
-    +1, +1, -1, +1, -1, -1, +1, -1 };               // diagonally linked
-  static const short neighborOffsetRho[26] =
-  { 0,   0, +1, -1,  0,  0,                         // directly linked
-    0,   0,  0,  0, +1, -1, +1, -1, +1, -1, +1, -1, // semi directly linked
-    +1, -1, +1, +1, -1, +1, -1, -1 };               // diagonally linked
 
   for (short i = 0; i < neighborhoodSize; ++i) {
     t = theta;
@@ -225,16 +194,6 @@ void Accumulator::getValues(double& theta, double& phi, double& rho,
   theta = (thetaIndex - 0.5) * PI2;
   phi = (double)(phiIndex) * phiDelta;
   rho = (double)(rhoIndex) * rhoDelta;
-}
-
-void Accumulator::sphericalToCartesianCoordinates(cv::Vec3d   & normal,
-                                                  const double& theta,
-                                                  const double& phi,
-                                                  const double& rho)
-{
-  normal[0] = sin(phi) * cos(theta) * rho;
-  normal[1] = sin(phi) * sin(theta) * rho;
-  normal[2] = cos(phi) * rho;
 }
 
 double Accumulator::fixTheta(double theta, const int phi)

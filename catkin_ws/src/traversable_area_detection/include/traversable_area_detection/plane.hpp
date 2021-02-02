@@ -51,13 +51,18 @@ public:
 
   bool computePlaneParameters(std::vector<Plane>& planes)
   {
+    // Get normal vector
+    normal[0] = std::sin(phi) * std::cos(theta);
+    normal[1] = std::sin(phi) * std::sin(theta);
+    normal[2] = std::cos(phi);
+
+    // Set up new normal and rho
     cv::Vec3d newNormal(0.0, 0.0, 0.0);
     double    newRho = 0.0;
 
     // Get nodes representing the plane
     for (size_t i = 0; i < nodes.size(); i++) {
       Quadtree *node = nodes[i];
-      bool skip = false;
       if (planes.size() > 0) {
         for (Plane& plane : planes) {
           std::vector<Quadtree *>::iterator j =
@@ -65,13 +70,12 @@ public:
           if (j != plane.nodes.end()) {
             if (leastSquareError(plane, *node) <
                 leastSquareError(*this, *node)) {
-              skip = true;
-              if (nodes.size() <= 1) {
-                return false;
-              }
               nodes.erase(nodes.begin() + i);
               i--;
-              break;
+              if (nodes.size() == 0) {
+                return false;
+              }
+              goto skipToNextNode;
             } else {
               plane.rootRepresentativeness -= node->rootRepresentativeness;
               plane.samples -= node->samples;
@@ -80,13 +84,11 @@ public:
           }
         }
       }
-      if (skip) {
-        continue;
-      }
       newNormal += node->normal;
       newRho += node->rho;
       rootRepresentativeness += node->rootRepresentativeness;
       samples += node->samples;
+      skipToNextNode: {}
     }
     if (samples > MIN_PLANE_SAMPLE_SIZE) {
       normal = cv::normalize(newNormal / (float)nodes.size());

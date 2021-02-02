@@ -27,6 +27,8 @@
 #define MIN_CONTOUR_SIZE 3                                      // [points]
 #define MAX_DISTANCE_TO_NODE 2.0                                // [m]
 #define MIN_PLANE_SAMPLE_SIZE_UNFIT_NODES 1000
+#define MAX_LSQE_TO_MATCH 1.0
+#define ACCEPTABLE_LSQE_TO_MATCH 0.05
 
 bool PlaneAnalysis::isGround(const Plane* currentFloor, const Plane& plane,
                              const float cameraHeight)
@@ -364,19 +366,20 @@ void PlaneAnalysis::matchUnfitNodes(std::vector<Plane>     & planes,
 
   for (Quadtree *node : unfitNodes) {
     Plane *bestFit;
-    float  bestValue = 1.0;
+    float  bestValue = MAX_LSQE_TO_MATCH;
     for (Plane& plane : planes) {
       float lsqe = PlaneAnalysis::leastSquareError(plane, *node);
-      if ((lsqe > 0.0001) && (lsqe < bestValue) &&
-          ((lsqe < 0.05) ||
-           (PlaneAnalysis::isWithinTwoStandardDeviations(plane, *node) ||
-            (PlaneAnalysis::hasSimilarNormal(plane, *node) &&
-             PlaneAnalysis::hasSimilarDistance(plane, *node))))) {
+      bool fitsInPlane = 
+            (PlaneAnalysis::isWithinTwoStandardDeviations(plane, *node) ||
+             (PlaneAnalysis::hasSimilarNormal(plane, *node) &&
+              PlaneAnalysis::hasSimilarDistance(plane, *node)));
+      if ((lsqe > NONZERO) && (lsqe < bestValue) &&
+          ((lsqe < ACCEPTABLE_LSQE_TO_MATCH) || fitsInPlane)) {
         bestFit = &plane;
         bestValue = lsqe;
       }
     }
-    if (bestValue < 1.0) {
+    if (bestValue < MAX_LSQE_TO_MATCH) {
       bestFit->nodes.push_back(node);
       bestFit->samples += node->samples;
       bestFit->rootRepresentativeness += node->rootRepresentativeness;
@@ -558,7 +561,6 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
       cv::Vec2i point2d(r, c);
       if ((minDistance < MAX_POINT_PLANE_DISTANCE)) {
         bestFit->setImagePoint(point2d);
-        bestFit->insert3dPoint(point, mutex);
         bestFit->insert2dPoint(point2d, mutex);
       } else if (isObject) {
         // Check if point is relevant
