@@ -10,7 +10,7 @@
 #define MIN_INDEPENDENT_NODE_SIZE 800 / square(IMAGE_SCALE)
 #define POINT_DELTA 2
 #define MIN_PLANE_SAMPLE_SIZE 8000 / square(IMAGE_SCALE)
-#define MIN_NODE_NEIGHBOR_SAMPLE_SUM 1600 / square(IMAGE_SCALE)
+#define MIN_NODE_NEIGHBOR_SAMPLE_SUM 3200 / square(IMAGE_SCALE)
 #define TOP_VIEW_DELTA 0.03                                          // [m]
 #define SIDE_VIEW_DELTA 0.01                                         // [m]
 #define TOP_VIEW_HEIGHT std::ceil(MAX_DISTANCE / TOP_VIEW_DELTA)     // [pixels]
@@ -133,7 +133,7 @@ public:
         }
         if (((x1 == xn1) || (x2 == xn1) || (x1 == xn2) || (x2 == xn2)) &&
             ((y1 == yn1) || (y2 == yn1) || (y1 == yn2) || (y2 == yn2))) {
-          samples += nextNode->samples;
+          samples += node->samples;
           if (samples > MIN_NODE_NEIGHBOR_SAMPLE_SUM) {
             return true;
           }
