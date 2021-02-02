@@ -10,7 +10,7 @@
 #define MIN_INDEPENDENT_NODE_SIZE 800 / square(IMAGE_SCALE)
 #define POINT_DELTA 2
 #define MIN_PLANE_SAMPLE_SIZE 8000 / square(IMAGE_SCALE)
-#define MIN_NODE_NEIGHBOR_SAMPLE_SUM 3200 / square(IMAGE_SCALE)
+#define MIN_NODE_NEIGHBOR_SAMPLE_SUM 1800 / square(IMAGE_SCALE)
 #define TOP_VIEW_DELTA 0.03                                          // [m]
 #define SIDE_VIEW_DELTA 0.01                                         // [m]
 #define TOP_VIEW_HEIGHT std::ceil(MAX_DISTANCE / TOP_VIEW_DELTA)     // [pixels]
@@ -88,7 +88,7 @@ public:
       rootRepresentativeness += node->rootRepresentativeness;
       samples += node->samples;
     }
-    if (samples > 0) {
+    if (samples > MIN_PLANE_SAMPLE_SIZE) {
       normal = cv::normalize(newNormal / (float)nodes.size());
       rho = newRho / (float)nodes.size();
       position = normal * rho;

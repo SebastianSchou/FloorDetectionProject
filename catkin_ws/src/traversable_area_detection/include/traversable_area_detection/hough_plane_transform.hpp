@@ -27,7 +27,6 @@ public:
     float timeVoting = msUntilNow(start) - timeQuadtree -
                        timeInitializeQuadtree;
     peakDetection(planes, *accumulator, usedBins, usedKernels);
-    PlaneAnalysis::removeSmallPlanes(planes);
     std::sort(planes.begin(), planes.end());
     float timePeak = msUntilNow(start) - timeQuadtree - timeVoting -
                      timeInitializeQuadtree;
