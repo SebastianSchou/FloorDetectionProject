@@ -216,7 +216,6 @@ bool vote(std::vector<Bin>& usedBins,
 {
   // Cluster representativeness
   votes = votes * kernel.node->rootRepresentativeness;
-  accum.maxVotes = std::max(accum.maxVotes, votes);
 
   // Test if the cell has already been voted by this kernel
   if (cell.hasBeenVotedForBefore(kernel.node)) {

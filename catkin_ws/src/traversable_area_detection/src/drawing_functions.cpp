@@ -111,10 +111,8 @@ cv::Mat DrawingFunctions::drawAccumulatorCellVotes(const int          height,
       } else {
         votes = accumulator.data[phi][theta]->getVoteSumSlice(minRho, maxRho);
       }
-      votes = votes > 500 ? 500 : votes;
-      double maxVotes = accumulator.maxVotes > 500 ? 500 : accumulator.maxVotes;
-      int    votingColor = maxVotes == 0 ?
-                           255 : 255 - std::round(votes / maxVotes * 255);
+      double maxVotes = accumulator.maxVotes;
+      int    votingColor = 255 - std::round(votes / maxVotes * 255);
 
       // Draw cell color and borders
       cv::rectangle(accumDrawing, from, to,

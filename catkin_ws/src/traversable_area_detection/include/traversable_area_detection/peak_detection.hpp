@@ -14,6 +14,7 @@ inline void peakDetection(std::vector<Plane>       & planes,
                                      bin.rhoIndex);
     bin.votes = accum.convolutionValue(bin.thetaIndex, bin.phiIndex,
                                        bin.rhoIndex);
+    accum.maxVotes = std::max(accum.maxVotes, bin.votes);
 
     cell.votes = bin.votes;
     cell.thetaIndex = bin.thetaIndex;
