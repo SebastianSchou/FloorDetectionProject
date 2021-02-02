@@ -39,7 +39,24 @@ static void planePubCallback(const std::string& file, const int waitTime)
                                                              cameraData);
     PlaneAnalysis::computePlaneContour(planes, nonPlanePoints);
     msg.computation_time = msUntilNow(start);
+
+    // This will add a plane of all nodes, making it easy to plot
+    bool plotAllNodes = true;
+    if (plotAllNodes) {
+      Plane allNodes;
+      for (Quadtree* node : houghPlaneTransform.root.planes) {
+        allNodes.nodes.push_back(node);
+      }
+      allNodes.id = 10000;
+      planes.push_back(allNodes);
+    }
+
     PlaneAnalysis::insertPlanePublisherInformation(msg, planes, true);
+
+    // Remove the extra plane to avoid drawing it
+    if (plotAllNodes) {
+      planes.erase(planes.end() - 1);
+    }
 
     if (waitTime == 1) {
       msg.success = true;
