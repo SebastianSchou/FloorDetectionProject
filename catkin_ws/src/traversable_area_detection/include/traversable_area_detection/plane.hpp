@@ -5,6 +5,7 @@
 #include <traversable_area_detection/helper_function.hpp>
 #include <mutex>
 
+#define ANGLE_TO_NORMAL(X) std::sqrt(2 - 2 * cos(X * CV_PI / 180.0))
 #define MAX_ANGLE_DIFFERENCE 4.0 * CV_PI / 180.0 // [radians]
 #define MAX_DISTANCE_DIFFERENCE 0.08             // [m]
 #define MIN_INDEPENDENT_NODE_SIZE 800 / square(IMAGE_SCALE)
@@ -19,6 +20,7 @@
 #define SIDE_VIEW_HEIGHT 1.0                                         // [m]
 #define SIDE_VIEW_SIZE std::ceil(SIDE_VIEW_HEIGHT / SIDE_VIEW_DELTA) // [pixels]
 #define HEIGHT_DELTA 0.1                                             // [m]
+#define MAX_PLANE_NORMAL_DIFF ANGLE_TO_NORMAL(4.0)
 
 enum PlaneType {
   PLANE_TYPE_OTHER,
@@ -134,6 +136,79 @@ public:
       }
     }
     return false;
+  }
+
+  const bool hasSimilarNormal(const Plane& plane) const
+  {
+    return cv::norm(normal - plane.normal, cv::NORM_L2) < MAX_PLANE_NORMAL_DIFF;
+  }
+
+  const bool hasSimilarNormal(const Quadtree& node) const
+  {
+    return cv::norm(normal - node.normal,
+                    cv::NORM_L2) < MAX_PLANE_NORMAL_DIFF;
+  }
+
+  const bool hasSimilarDistance(const Plane& plane) const
+  {
+    return std::abs(rho - plane.rho) < 2 * MAX_DISTANCE_DIFFERENCE;
+  }
+
+  const bool hasSimilarDistance(const Quadtree& node) const
+  {
+    return std::abs(rho - node.rho) < 2 * MAX_DISTANCE_DIFFERENCE;
+  }
+
+  void transferNodes(Plane& plane)
+  {
+    // transfers nodes from one plane to another
+    for (size_t i = 0; i < plane.nodes.size(); i++) {
+      Quadtree *node = plane.nodes[i];
+      rootRepresentativeness += node->rootRepresentativeness;
+      samples += node->samples;
+    }
+    std::move(plane.nodes.begin(), plane.nodes.end(),
+              std::inserter(nodes, nodes.end()));
+  }
+
+  const float leastSquareError(const Quadtree& node) const
+  {
+    return square(normal[X] - node.normal[X]) +
+           square(normal[Y] - node.normal[Y]) +
+           square(normal[Z] - node.normal[Z]) +
+           square(10.0 * (rho - node.rho));
+  }
+
+  const bool isWithinTwoStandardDeviations(const Plane& plane) const
+  {
+    return std::abs(rho - plane.rho) < 2 * rhoStd &&
+           std::abs(phi - plane.phi) < 2 * phiStd &&
+           getThetaDifference(plane) < 2 * thetaStd;
+  }
+
+  const bool isWithinTwoStandardDeviations(const Quadtree& node) const
+  {
+    return std::abs(rho - node.rho) < 2 * rhoStd &&
+           std::abs(phi - node.phi) < 2 * phiStd &&
+           getThetaDifference(node) < 2 * thetaStd;
+  }
+
+  const float getThetaDifference(const Plane& plane) const
+  {
+    // Theta goes from 0 to 2 PI, with 0 and 2 PI being the same. Therefore, if
+    // the difference is too large, it is subtracted from 2 PI
+    float thetaDiff = std::abs(theta - plane.theta);
+
+    thetaDiff = thetaDiff > CV_PI ? 2 * CV_PI - thetaDiff : thetaDiff;
+    return thetaDiff;
+  }
+
+  const float getThetaDifference(const Quadtree& node) const
+  {
+    float thetaDiff = std::abs(theta - node.theta);
+
+    thetaDiff = thetaDiff > CV_PI ? 2 * CV_PI - thetaDiff : thetaDiff;
+    return thetaDiff;
   }
 
   inline bool operator<(const Plane& p) const
