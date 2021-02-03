@@ -5,11 +5,8 @@
 #include <traversable_area_detection/HeightArea.h>
 #include <traversable_area_detection/Point.h>
 
-#define ANGLE_TO_NORMAL(X) std::sqrt(2 - 2 * cos(X * CV_PI / 180.0))
 #define MAX_POINT_PLANE_DISTANCE 0.1   // [m]
 #define ACCEPTABLE_BEST_POINT_FIT 0.01 // [m]
-#define MAX_POINT_PLANE_NORMAL_DIFF ANGLE_TO_NORMAL(10.0)
-#define ACCEPTABLE_BEST_NORMAL_DIFF ANGLE_TO_NORMAL(5.0)
 #define MAX_INCLINE_DEGREES 8.0                                 // [degrees]
 #define MAX_INCLINE_RADIANS MAX_INCLINE_DEGREES * CV_PI / 180.0 // [radians]
 #define MIN_FLOOR_DISTANCE 0.5                                  // [m]
@@ -406,7 +403,7 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
       // Loop over planes and find the plane which fits best
       Plane *bestFit;
       double minDistance = MAX_POINT_PLANE_DISTANCE,
-      normalDiff = MAX_POINT_PLANE_NORMAL_DIFF;
+      minAngle = 2 * MAX_ANGLE_DIFFERENCE;
       bool isObject = true;
       for (Plane& plane : planes) {
         // Calculate distance from plane to point. If this is below max
@@ -445,20 +442,18 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
           if (point.dot(normalNW) < 0) {
             normalNW *= -1;
           }
-          cv::Vec3d diffNormalSE = plane.normal - normalSE;
-          cv::Vec3d diffNormalNW = plane.normal - normalNW;
-          double diff = std::max(cv::norm(diffNormalSE, cv::NORM_L2),
-                                 cv::norm(diffNormalNW, cv::NORM_L2));
-          if (diff < normalDiff * scale) {
+          double angle = std::max(plane.getAngleToNormal(normalSE),
+                                  plane.getAngleToNormal(normalNW));
+          if (angle < minAngle * scale) {
             minDistance = dist;
-            normalDiff = diff;
+            minAngle = angle;
             bestFit = &plane;
           }
 
           // If the distance is below the acceptable value, skip the rest
           // of the planes
           if ((dist < ACCEPTABLE_BEST_POINT_FIT) &&
-              (diff < ACCEPTABLE_BEST_NORMAL_DIFF)) {
+              (angle < MAX_ANGLE_DIFFERENCE)) {
             break;
           }
         }

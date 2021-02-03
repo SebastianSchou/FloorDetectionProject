@@ -5,7 +5,6 @@
 #include <traversable_area_detection/helper_function.hpp>
 #include <mutex>
 
-#define ANGLE_TO_NORMAL(X) std::sqrt(2 - 2 * cos(X * CV_PI / 180.0))
 #define MAX_ANGLE_DIFFERENCE 4.0 * CV_PI / 180.0 // [radians]
 #define MAX_DISTANCE_DIFFERENCE 0.08             // [m]
 #define MIN_INDEPENDENT_NODE_SIZE 800 / square(IMAGE_SCALE)
@@ -20,7 +19,6 @@
 #define SIDE_VIEW_HEIGHT 1.0                                         // [m]
 #define SIDE_VIEW_SIZE std::ceil(SIDE_VIEW_HEIGHT / SIDE_VIEW_DELTA) // [pixels]
 #define HEIGHT_DELTA 0.1                                             // [m]
-#define MAX_PLANE_NORMAL_DIFF ANGLE_TO_NORMAL(4.0)
 
 enum PlaneType {
   PLANE_TYPE_OTHER,
@@ -53,14 +51,11 @@ public:
 
   bool computePlaneParameters(std::vector<Plane>& planes)
   {
-    // Get normal vector
+    // Get normal vector and position
     normal[0] = std::sin(phi) * std::cos(theta);
     normal[1] = std::sin(phi) * std::sin(theta);
     normal[2] = std::cos(phi);
-
-    // Set up new normal and rho
-    cv::Vec3d newNormal(0.0, 0.0, 0.0);
-    double    newRho = 0.0;
+    position = normal * rho;
 
     // Get nodes representing the plane
     for (size_t i = 0; i < nodes.size(); i++) {
@@ -70,8 +65,7 @@ public:
           std::vector<Quadtree *>::iterator j =
             find(plane.nodes.begin(), plane.nodes.end(), node);
           if (j != plane.nodes.end()) {
-            if (leastSquareError(plane, *node) <
-                leastSquareError(*this, *node)) {
+            if (plane.leastSquareError(*node) < leastSquareError(*node)) {
               nodes.erase(nodes.begin() + i);
               i--;
               if (nodes.size() == 0) {
@@ -86,29 +80,14 @@ public:
           }
         }
       }
-      newNormal += node->normal;
-      newRho += node->rho;
       rootRepresentativeness += node->rootRepresentativeness;
       samples += node->samples;
       skipToNextNode: {}
     }
     if (samples > MIN_PLANE_SAMPLE_SIZE) {
-      normal = cv::normalize(newNormal / (float)nodes.size());
-      rho = newRho / (float)nodes.size();
-      position = normal * rho;
-      phi = std::acos(normal[2]);
-      theta = std::atan2(normal[1], normal[0]);
       return true;
     }
     return false;
-  }
-
-  float leastSquareError(const Plane& plane, const Quadtree& node)
-  {
-    return square(plane.normal[0] - node.normal[0]) +
-           square(plane.normal[1] - node.normal[1]) +
-           square(plane.normal[2] - node.normal[2]) +
-           square(10 * (plane.rho - node.rho));
   }
 
   bool hasNeighbor(Quadtree *node, int& sampleSum)
@@ -148,15 +127,19 @@ public:
     return false;
   }
 
+  const double getAngleToNormal(const cv::Vec3d vector) const
+  {
+    return std::acos(normal.dot(vector));
+  }
+
   const bool hasSimilarNormal(const Plane& plane) const
   {
-    return cv::norm(normal - plane.normal, cv::NORM_L2) < MAX_PLANE_NORMAL_DIFF;
+    return getAngleToNormal(plane.normal) < 2 * MAX_ANGLE_DIFFERENCE;
   }
 
   const bool hasSimilarNormal(const Quadtree& node) const
   {
-    return cv::norm(normal - node.normal,
-                    cv::NORM_L2) < MAX_PLANE_NORMAL_DIFF;
+    return getAngleToNormal(node.normal) < 2 * MAX_ANGLE_DIFFERENCE;
   }
 
   const bool hasSimilarDistance(const Plane& plane) const
