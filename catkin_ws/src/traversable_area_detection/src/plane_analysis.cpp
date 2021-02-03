@@ -517,8 +517,22 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
       if (plane.type == PLANE_TYPE_CEILING) {
         continue;
       }
-      if (plane.image2dPoints.at<uchar>(r, c) > 0) {
-        PlaneAnalysis::convert2dTo3d(p, plane);
+      if (plane.image2dPoints.at<uchar>(r, c) > 0 && -p[Y] < maxObjectHeight) {
+        const cv::Vec2i coord = PlaneAnalysis::getTopViewCoordinates(p);
+        bool isWithinArea =
+          plane.topView.at<uchar>(coord[0], coord[1]) > 0;
+        if (-p[Y] < minObjectHeight + MIN_ROBOT_HEIGHT + HEIGHT_DELTA) {
+          PlaneAnalysis::convert2dTo3d(p, plane);
+        } else if (!isWithinArea) {
+          int margin = 1;
+          cv::Point p1(coord[0], coord[1]);
+          cv::Point p2(coord[0] + margin, coord[1]);
+          cv::Point p3(coord[0] + margin, coord[1] + margin);
+          cv::Point p4(coord[0], coord[1] + margin);
+          std::vector<cv::Point> area {p1, p2, p3, p4 };
+          nonPlanePoints.insertHeightLimitedArea(-p[Y] - minObjectHeight,
+                                                 area, mutex);
+        }
       }
     }
   }
@@ -528,19 +542,29 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
   // a large structuring element to connect points
   stucturingElement = cv::getStructuringElement(cv::MORPH_RECT,
                                                 cv::Size(11, 11));
+  if (floor != NULL) {
+    cv::morphologyEx(floor->topView, floor->topView,
+                     cv::MORPH_CLOSE, stucturingElement);
+    cv::morphologyEx(floor->topView, floor->topView,
+                     cv::MORPH_OPEN, stucturingElement);
+  }
   for (Plane& plane : planes) {
-    if (plane.type == PLANE_TYPE_CEILING) {
+    if (plane.type == PLANE_TYPE_CEILING || plane.type == PLANE_TYPE_FLOOR) {
       continue;
-    }
-    if (floor != NULL && plane.type != PLANE_TYPE_FLOOR) {
-      floor->topView -= plane.topView;
     }
     cv::morphologyEx(plane.topView, plane.topView,
                      cv::MORPH_CLOSE, stucturingElement);
+    if (floor != NULL) {
+      floor->topView -= plane.topView;
+    }
   }
 
   // Remove spots with objects close to floor level
   if (floor != NULL) {
+    stucturingElement = cv::getStructuringElement(cv::MORPH_RECT,
+                                                  cv::Size(7, 7));
+    cv::morphologyEx(restrictedArea, restrictedArea,
+                     cv::MORPH_CLOSE, stucturingElement);
     floor->topView -= restrictedArea;
   }
 
@@ -603,8 +627,19 @@ void PlaneAnalysis::convert2dTo3d(const cv::Vec3d& p, Plane& plane)
 }
 
 void PlaneAnalysis::cleanUpHeightLimitedAreas(Plane& nonPlanePoints,
-                                              Plane& floor)
+                                              std::vector<Plane>& planes)
 {
+  // Find floor
+  Plane* floor = NULL;
+  for (Plane& plane : planes) {
+    if (plane.type == PLANE_TYPE_FLOOR) {
+      floor = &plane;
+    }
+  }
+  if (floor == NULL) {
+    return;
+  }
+
   // Combines all contour for each height and removes contour from greater
   // heights which exists in lower heights
   for (auto const& x : nonPlanePoints.heightLimitedAreas) {
@@ -613,7 +648,7 @@ void PlaneAnalysis::cleanUpHeightLimitedAreas(Plane& nonPlanePoints,
     cv::drawContours(heightIm, x.second, -1, cv::Scalar(255), cv::FILLED);
 
     // Removes elements which isn't above the floor
-    heightIm &= floor.topView;
+    heightIm &= floor->topView;
 
     // Continue to next height if there are no non zero elements left in the
     // image for this height
@@ -622,8 +657,14 @@ void PlaneAnalysis::cleanUpHeightLimitedAreas(Plane& nonPlanePoints,
     }
 
     // Remove all elements which appear in previous heights
-    for (auto const& y : floor.heightLimitedAreas) {
+    for (auto const& y : floor->heightLimitedAreas) {
       cv::drawContours(heightIm, y.second, -1, cv::Scalar(0), cv::FILLED);
+    }
+
+    for (Plane& plane : planes) {
+      if (plane.type != PLANE_TYPE_FLOOR) {
+        heightIm -= plane.topView;
+      }
     }
 
     // Continue to next height if there are no non zero elements left in the
@@ -637,7 +678,7 @@ void PlaneAnalysis::cleanUpHeightLimitedAreas(Plane& nonPlanePoints,
     std::vector<std::vector<cv::Point> > contours;
     cv::findContours(heightIm, contours, cv::RETR_TREE,
                      cv::CHAIN_APPROX_TC89_KCOS);
-    floor.heightLimitedAreas[x.first] = contours;
+    floor->heightLimitedAreas[x.first] = contours;
     heightIm.release();
   }
 }
@@ -736,7 +777,7 @@ void PlaneAnalysis::computePlaneContour(std::vector<Plane>& planes,
   // Add height limited restrictions to the floor plane
   for (Plane& plane : planes) {
     if (plane.type == PLANE_TYPE_FLOOR) {
-      PlaneAnalysis::cleanUpHeightLimitedAreas(nonPlanePoints, plane);
+      PlaneAnalysis::cleanUpHeightLimitedAreas(nonPlanePoints, planes);
       break;
     }
   }

@@ -36,7 +36,7 @@ void      computePlaneContour(std::vector<Plane>& planes,
                               Plane             & nonPlanePoints);
 void      printPlanesInformation(const std::vector<Plane>& planes);
 void      printPlaneInformation(const Plane& plane);
-void      cleanUpHeightLimitedAreas(Plane& nonPlanePoints, Plane& floor);
+void      cleanUpHeightLimitedAreas(Plane& nonPlanePoints, std::vector<Plane>& planes);
 void      insertPlanePublisherInformation(
   traversable_area_detection::HoughPlaneTransform& msg,
   const std::vector<Plane>                       & planes,
