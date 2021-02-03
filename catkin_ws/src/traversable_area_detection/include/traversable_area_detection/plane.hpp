@@ -111,29 +111,39 @@ public:
            square(10 * (plane.rho - node.rho));
   }
 
-  bool hasNeighbor(Quadtree *loneNode)
+  bool hasNeighbor(Quadtree *node, int& sampleSum)
   {
-    int x1 = loneNode->minBounds.x, x2 = loneNode->maxBounds.x;
-    int y1 = loneNode->minBounds.y, y2 = loneNode->maxBounds.y;
+    sampleSum += node->samples;
+    node->visited = true;
+    if (sampleSum > MIN_NODE_NEIGHBOR_SAMPLE_SUM) {
+      node->visited = false;
+      return true;
+    }
+    int x1 = node->minBounds.x, x2 = node->maxBounds.x;
+    int y1 = node->minBounds.y, y2 = node->maxBounds.y;
+    std::vector<Quadtree*> visitedNodes;
 
-    std::vector<Quadtree *> nextNodes; nextNodes.push_back(loneNode);
-    int samples = loneNode->samples;
-    for (const Quadtree *nextNode : nextNodes) {
-      for (Quadtree *node : nodes) {
-        int xn1 = node->minBounds.x, xn2 = node->maxBounds.x;
-        int yn1 = node->minBounds.y, yn2 = node->maxBounds.y;
-        if ((x1 == xn1) && (y1 == yn1)) {
-          continue;
-        }
-        if (((x1 == xn1) || (x2 == xn1) || (x1 == xn2) || (x2 == xn2)) &&
-            ((y1 == yn1) || (y2 == yn1) || (y1 == yn2) || (y2 == yn2))) {
-          samples += node->samples;
-          if (samples > MIN_NODE_NEIGHBOR_SAMPLE_SUM) {
-            return true;
+    for (Quadtree *neighbor : nodes) {
+      if (neighbor->visited) {
+        continue;
+      }
+      int xn1 = neighbor->minBounds.x, xn2 = neighbor->maxBounds.x;
+      int yn1 = neighbor->minBounds.y, yn2 = neighbor->maxBounds.y;
+      if (((x1 == xn1) || (x2 == xn1) || (x1 == xn2) || (x2 == xn2)) &&
+          ((y1 == yn1) || (y2 == yn1) || (y1 == yn2) || (y2 == yn2))) {
+        if (hasNeighbor(neighbor, sampleSum)) {
+          for (Quadtree* visitedNode : visitedNodes) {
+            visitedNode->visited = false;
           }
-          nextNodes.push_back(node);
+          node->visited = false;
+          return true;
+        } else {
+          visitedNodes.push_back(neighbor);
         }
       }
+    }
+    for (Quadtree* visitedNode : visitedNodes) {
+      visitedNode->visited = false;
     }
     return false;
   }

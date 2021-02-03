@@ -298,8 +298,9 @@ void PlaneAnalysis::removeStandAloneNodes(std::vector<Plane>& planes)
   for (Plane& plane : planes) {
     for (size_t i = 0; i < plane.nodes.size(); i++) {
       Quadtree *node = plane.nodes[i];
+      int sampleSum = 0;
       if (node->samples < MIN_INDEPENDENT_NODE_SIZE) {
-        if (!plane.hasNeighbor(node)) {
+        if (!plane.hasNeighbor(node, sampleSum)) {
           plane.samples -= node->samples;
           plane.rootRepresentativeness -= node->rootRepresentativeness;
           plane.nodes.erase(plane.nodes.begin() + i);

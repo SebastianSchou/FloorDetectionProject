@@ -18,6 +18,7 @@ Quadtree::Quadtree()
   minVariance = 0.0;
   samples = 0;
   isPlane = false;
+  visited = false;
   maxPlaneDistance = 0.0;
   maxPhiAngle = 0.0;
   rootRepresentativeness = 0.0;

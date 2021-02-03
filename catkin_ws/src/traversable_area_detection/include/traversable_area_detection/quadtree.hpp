@@ -37,7 +37,7 @@ public:
          sampleDensity, maxPhiAngle, rho, phi, theta;
   SummedAreaTable sat;
   std::vector<Quadtree *> planes, nonPlanes;
-  bool isPlane;
+  bool isPlane, visited;
 
 private:
 
