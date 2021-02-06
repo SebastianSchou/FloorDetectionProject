@@ -20,7 +20,7 @@ void DrawingFunctions::drawQuadtreeBorders(cv::Mat   & image,
                   color,
                   cv::FILLED);
     cv::Point center =
-      (node.minBounds + (node.maxBounds - node.minBounds) / 2) * 4;
+      (node.minBounds + (node.maxBounds - node.minBounds) / 2) * scale;
     cv::putText(image, std::to_string(node.id), center - cv::Point(10, -7),
                 cv::FONT_HERSHEY_PLAIN, 0.8, cv::Scalar::all(255));
     cv::addWeighted(image, 1.0, rect, 0.5, 0.0, image);
@@ -156,7 +156,7 @@ void DrawingFunctions::drawPlanesInQuadtree(cv::Mat   & image,
                   cv::Scalar::all(125),
                   1);
     cv::Point center =
-      (node.minBounds + (node.maxBounds - node.minBounds) / 2) * 4;
+      (node.minBounds + (node.maxBounds - node.minBounds) / 2) * scale;
     cv::putText(image, std::to_string(node.id), center - cv::Point(10, -7),
                 cv::FONT_HERSHEY_PLAIN, 0.8, cv::Scalar::all(255));
     cv::addWeighted(image, 1.0, rect, 0.8, 0.0, image);

@@ -170,8 +170,6 @@ bool CameraData::processFrames()
 
 bool CameraData::loadImage(const std::string& filename)
 {
-  width = DEPTH_WIDTH;
-  height = DEPTH_HEIGHT;
   cv::FileStorage file(filename + "_depth.xml", cv::FileStorage::READ);
   if (!file.isOpened()) {
     ROS_ERROR("File %s could not be opened.",
@@ -184,6 +182,7 @@ bool CameraData::loadImage(const std::string& filename)
   cv::medianBlur(depthData, depthData, 5);
   cv::GaussianBlur(depthData, depthData, cv::Size(5, 5), 0);
 
+  width = depthData.cols, height = depthData.rows;
   fx = USUAL_FX; fy = USUAL_FY;
   ppx = USUAL_PPX; ppy = USUAL_PPY;
 

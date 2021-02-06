@@ -8,8 +8,6 @@
 #define IMAGE_SCALE 4    // For decimation filter
 #define IMAGE_WIDTH 848  // [pixel]
 #define IMAGE_HEIGHT 480 // [pixel]
-#define DEPTH_WIDTH IMAGE_WIDTH / IMAGE_SCALE
-#define DEPTH_HEIGHT IMAGE_HEIGHT / IMAGE_SCALE
 #define USUAL_FY 422.772369
 #define USUAL_FX 422.772369
 #define USUAL_PPX 424.636292
