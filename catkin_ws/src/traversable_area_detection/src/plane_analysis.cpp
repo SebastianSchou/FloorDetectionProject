@@ -503,32 +503,67 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
 
   // Remove small holes in the plane points using structured elements and a
   // open / close combo
-  cv::Mat stucturingElement = cv::getStructuringElement(cv::MORPH_RECT,
-                                                        cv::Size(3, 3));
+  cv::Mat stucturingElement5x5 = cv::getStructuringElement(cv::MORPH_RECT,
+                                                        cv::Size(5, 5));
   for (Plane& plane : planes) {
     cv::morphologyEx(plane.image2dPoints, plane.image2dPoints,
-                     cv::MORPH_OPEN, stucturingElement);
+                     cv::MORPH_CLOSE, stucturingElement5x5);
     cv::morphologyEx(plane.image2dPoints, plane.image2dPoints,
-                     cv::MORPH_CLOSE, stucturingElement);
+                     cv::MORPH_OPEN, stucturingElement5x5);
     nonPlanePoints.image2dPoints -= plane.image2dPoints;
+  }
+
+  // Draw floor in x-z coordinate
+  if (floor != NULL) {
+    cameraData.data3d.forEach<cv::Vec3d>(
+      [&](cv::Vec3d& p, const int *position) {
+      const int r = position[0], c = position[1];
+      if ((p[Z] <= MIN_DISTANCE) || (p[Z] >= MAX_DISTANCE)) {
+        return;
+      }
+      if (floor->image2dPoints.at<uchar>(r, c) > 0) {
+        PlaneAnalysis::convert2dTo3d(p, *floor);
+      }
+    }
+      );
+  }
+
+  // Use a 'close', 'open' and 'erode' operation on the floor to fill small
+  // holes, remove small spots of floor, and to erode away floor close to the
+  // walls
+  cv::Mat stucturingElement11x11 = cv::getStructuringElement(cv::MORPH_RECT,
+                                                cv::Size(11, 11));
+  if (floor != NULL) {
+    cv::morphologyEx(floor->topView, floor->topView,
+                     cv::MORPH_CLOSE, stucturingElement11x11);
+    cv::morphologyEx(floor->topView, floor->topView,
+                     cv::MORPH_OPEN, stucturingElement11x11);
+    cv::morphologyEx(floor->topView, floor->topView,
+                      cv::MORPH_ERODE, stucturingElement5x5);
   }
 
   // Draw planes in x-z coordinate
   cameraData.data3d.forEach<cv::Vec3d>(
     [&](cv::Vec3d& p, const int *position) {
     const int r = position[0], c = position[1];
-    if ((p[Z] <= MIN_DISTANCE) || (p[Z] >= MAX_DISTANCE)) {
+    if ((p[Z] <= MIN_DISTANCE) || (p[Z] >= MAX_DISTANCE) ||
+        (-p[Y] >= maxObjectHeight)) {
       return;
     }
     for (Plane& plane : planes) {
-      if (plane.type == PLANE_TYPE_CEILING) {
+      if (plane.type == PLANE_TYPE_CEILING || plane.type == PLANE_TYPE_FLOOR) {
         continue;
       }
-      if (plane.image2dPoints.at<uchar>(r, c) > 0 && -p[Y] < maxObjectHeight) {
+      if (plane.image2dPoints.at<uchar>(r, c) > 0) {
         const cv::Vec2i coord = PlaneAnalysis::getTopViewCoordinates(p);
         bool isWithinArea =
           plane.topView.at<uchar>(coord[0], coord[1]) > 0;
-        if (-p[Y] < minObjectHeight + MIN_ROBOT_HEIGHT + HEIGHT_DELTA) {
+        bool isOutsideFloor = true;
+        if (floor != NULL) {
+          isOutsideFloor = floor->topView.at<uchar>(coord[0], coord[1]) == 0;
+        }
+        if (isOutsideFloor ||
+            -p[Y] < minObjectHeight + MIN_ROBOT_HEIGHT + HEIGHT_DELTA) {
           PlaneAnalysis::convert2dTo3d(p, plane);
         } else if (!isWithinArea) {
           int margin = 1;
@@ -547,20 +582,12 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
 
   // As 3d points can be sporadic, use a 'close' morphology with
   // a large structuring element to connect points
-  stucturingElement = cv::getStructuringElement(cv::MORPH_RECT,
-                                                cv::Size(11, 11));
-  if (floor != NULL) {
-    cv::morphologyEx(floor->topView, floor->topView,
-                     cv::MORPH_CLOSE, stucturingElement);
-    cv::morphologyEx(floor->topView, floor->topView,
-                     cv::MORPH_OPEN, stucturingElement);
-  }
   for (Plane& plane : planes) {
     if (plane.type == PLANE_TYPE_CEILING || plane.type == PLANE_TYPE_FLOOR) {
       continue;
     }
     cv::morphologyEx(plane.topView, plane.topView,
-                     cv::MORPH_CLOSE, stucturingElement);
+                     cv::MORPH_CLOSE, stucturingElement11x11);
     if (floor != NULL) {
       floor->topView -= plane.topView;
     }
@@ -568,16 +595,17 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
 
   // Remove spots with objects close to floor level
   if (floor != NULL) {
-    stucturingElement = cv::getStructuringElement(cv::MORPH_RECT,
+    stucturingElement5x5 = cv::getStructuringElement(cv::MORPH_RECT,
                                                   cv::Size(7, 7));
     cv::morphologyEx(restrictedArea, restrictedArea,
-                     cv::MORPH_CLOSE, stucturingElement);
+                     cv::MORPH_CLOSE, stucturingElement5x5);
     floor->topView -= restrictedArea;
   }
 
   // Release cv::Mat memory
   restrictedArea.release();
-  stucturingElement.release();
+  stucturingElement11x11.release();
+  stucturingElement5x5.release();
 
   return nonPlanePoints;
 }
