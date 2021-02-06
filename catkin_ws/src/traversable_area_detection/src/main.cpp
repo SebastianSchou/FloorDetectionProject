@@ -33,10 +33,14 @@ static int planePubCallback(CameraData& cameraData, float& timeSum,
   HoughPlaneTransform houghPlaneTransform(cameraData);
   std::vector<Plane>  planes = houghPlaneTransform.planes;
   if (planes.empty()) {
+    hasNoPlanes: {}
     msg.computation_time = msUntilNow(start);
   } else {
     Plane nonPlanePoints = PlaneAnalysis::computePlanePoints(planes,
                                                              cameraData);
+    if (planes.empty()) {
+      goto hasNoPlanes;
+    }
     PlaneAnalysis::computePlaneContour(planes, nonPlanePoints);
 
     // Set publisher message
@@ -60,10 +64,8 @@ static int planePubCallback(CameraData& cameraData, float& timeSum,
     cv::Mat topView =
       DrawingFunctions::drawTopView(cameraData, planes,
                                     nonPlanePoints.topView);
-    //cv::Mat accum = DrawingFunctions::drawAccumulatorCellVotes(640, 480, *houghPlaneTransform.accumulator);
 
     // Show data
-    //cv::imshow("Accumulator", accum);
     cv::imshow("Top view", topView);
     if (cameraData.loadColorImage_) {
       cv::imshow("Realsense plane points cleaned", cleanedPlanePoints);

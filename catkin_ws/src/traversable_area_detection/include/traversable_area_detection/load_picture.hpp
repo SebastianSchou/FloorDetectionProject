@@ -33,15 +33,19 @@ static void planePubCallback(const std::string& file, const int waitTime)
   HoughPlaneTransform houghPlaneTransform(cameraData);
   std::vector<Plane>  planes = houghPlaneTransform.planes;
   if (planes.empty()) {
+    hasNoPlanes: {}
     msg.computation_time = msUntilNow(start);
   } else {
     Plane nonPlanePoints = PlaneAnalysis::computePlanePoints(planes,
                                                              cameraData);
+    if (planes.empty()) {
+      goto hasNoPlanes;
+    }
     PlaneAnalysis::computePlaneContour(planes, nonPlanePoints);
     msg.computation_time = msUntilNow(start);
 
     // This will add a plane of all nodes, making it easy to plot
-    bool plotAllNodes = true;
+    bool plotAllNodes = false;
     if (plotAllNodes) {
       Plane allNodes;
       for (Quadtree* node : houghPlaneTransform.root.planes) {
@@ -96,9 +100,7 @@ static void planePubCallback(const std::string& file, const int waitTime)
     //  width, height, *houghPlaneTransform.accumulator);
 
     // Show data
-    // cv::imshow("Accumulator", accumDrawing);
     cv::imshow("Top view", topView);
-    cv::imshow("Realsense non plane points", nonPlanePoints.image2dPoints);
     cv::imshow("Realsense plane points cleaned", cleanedPlanePoints);
     cv::imshow("Realsense plane quadtree", onlyQuadtree);
     cv::imshow("Realsense plane points rough",

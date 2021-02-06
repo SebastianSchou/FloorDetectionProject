@@ -354,6 +354,9 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
 
   // Remove planes which has too few samples
   PlaneAnalysis::removeSmallPlanes(planes);
+  if (planes.size() == 0) {
+    return nonPlanePoints;
+  }
 
   // Assign type to planes
   PlaneAnalysis::assignPlaneType(planes, cameraHeight);
@@ -626,7 +629,7 @@ bool PlaneAnalysis::isFaultyObject(const cv::Mat& m, const double dist,
       if ((std::abs(pointNew[Z] - dist) > MAX_OBJECT_DISTANCE_DIFFERENCE) ||
           (pointNew[Z] < MIN_DISTANCE) || (pointNew[Z] > MAX_DISTANCE)) {
         errorPoints++;
-        if (errorPoints >= 3) {
+        if (errorPoints > 4) {
           return true;
         }
       }
@@ -905,7 +908,7 @@ void PlaneAnalysis::insertPlanePublisherInformation(
         pointMsg.y = coord[Y];
         areaMsg.area.push_back(pointMsg);
       }
-      planeMsg.traversable_areas.push_back(areaMsg);
+      planeMsg.restricted_areas.push_back(areaMsg);
     }
     for (const auto& heightArea : plane.heightLimitedAreas) {
       traversable_area_detection::HeightArea heightAreaMsg;
