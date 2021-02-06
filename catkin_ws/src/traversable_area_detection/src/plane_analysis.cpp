@@ -15,8 +15,7 @@
 #define MAX_ROBOT_HEIGHT 1.5                                    // [m]
 #define OBJECT_MAX_HEIGHT_ABOVE_FLOOR MAX_ROBOT_HEIGHT          // [m]
 #define TYPICAL_FLOOR_HEIGHT -0.8                               // [m]
-#define MIN_PLANE_AREA 0.5                                      // [m^2]
-#define MAX_PLANE_AREA_FILL 1.0                                 // [m^2]
+#define MAX_PLANE_AREA_FILL 0.2                                 // [m^2]
 #define MAX_OBJECT_DISTANCE_DIFFERENCE 0.2                      // [m]
 #define MIN_CONTOUR_SIZE 3                                      // [points]
 #define MAX_DISTANCE_TO_NODE 2.0                                // [m]
@@ -745,10 +744,8 @@ void PlaneAnalysis::computePlaneContour(std::vector<Plane>& planes,
       // Get area
       float area = cv::contourArea(contour) * square(TOP_VIEW_DELTA);
 
-      // Check if the contour is hollow. This is done by check the mean value
-      // of pixel area within the contour. If close to zero, it is hollow
-      cv::Mat contourImage(plane.topView.size(), CV_8U, cv::Scalar::all(0));
-      cv::drawContours(contourImage, contours, i, 255, cv::FILLED);
+      // If the plane isn't the floor or of type 'other', than just add the
+      // area to the plane
       if ((plane.type != PLANE_TYPE_FLOOR) &&
           (plane.type != PLANE_TYPE_OTHER)) {
         // Simplify area
@@ -757,8 +754,15 @@ void PlaneAnalysis::computePlaneContour(std::vector<Plane>& planes,
         cv::approxPolyDP(contour, approx, epsilon, true);
         plane.area += area;
         plane.restrictedAreas.push_back(approx);
+        continue;
       }
+
+      // Check if the contour is hollow. This is done by check the mean value
+      // of pixel area within the contour. If close to zero, it is hollow
+      cv::Mat contourImage(plane.topView.size(), CV_8U, cv::Scalar::all(0));
+      cv::drawContours(contourImage, contours, i, 255, cv::FILLED);
       bool isHollow = cv::mean(plane.topView, contourImage)[0] < 125.0;
+      bool hasObjectsWithin = cv::mean(plane.topView & nonPlanePoints.topView)[0] > 0.0;
       contourImage.release();
 
       // Get center
@@ -772,25 +776,11 @@ void PlaneAnalysis::computePlaneContour(std::vector<Plane>& planes,
         continue;
       }
 
-      // Check if an object is within area
-      bool isObjectRestrictedArea = false;
-      for (const cv::Vec3d& p : nonPlanePoints.points3d) {
-        cv::Point2f areaCenter(PlaneAnalysis::getTopViewCoordinates(p));
-        isObjectRestrictedArea =
-          cv::pointPolygonTest(contour, areaCenter, false) >= 0;
-        if (isObjectRestrictedArea) {
-          break;
-        }
-      }
-
       // Fill counter if hollow and below max area size. If not hollow
       // and below min area size, discard it. Else, add as traversable
       // or restricted area
-      if (isHollow && (area < MAX_PLANE_AREA_FILL) && !isObjectRestrictedArea) {
+      if (isHollow && (area < MAX_PLANE_AREA_FILL) && !hasObjectsWithin) {
         cv::floodFill(plane.topView, cv::Point(cx, cy), cv::Scalar(255));
-        contours.erase(contours.begin() + i);
-        i--;
-      } else if ((area < MIN_PLANE_AREA) && !isObjectRestrictedArea) {
         contours.erase(contours.begin() + i);
         i--;
       } else {
@@ -810,12 +800,7 @@ void PlaneAnalysis::computePlaneContour(std::vector<Plane>& planes,
   }
 
   // Add height limited restrictions to the floor plane
-  for (Plane& plane : planes) {
-    if (plane.type == PLANE_TYPE_FLOOR) {
-      PlaneAnalysis::cleanUpHeightLimitedAreas(nonPlanePoints, planes);
-      break;
-    }
-  }
+  PlaneAnalysis::cleanUpHeightLimitedAreas(nonPlanePoints, planes);
 }
 
 void PlaneAnalysis::removeSmallPlanes(std::vector<Plane>& planes)
