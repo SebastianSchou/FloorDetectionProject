@@ -90,17 +90,17 @@ public:
     return false;
   }
 
-  bool hasNeighbor(Quadtree *node, int& sampleSum)
+  std::vector<Quadtree*> getNeighbors(Quadtree *node, int& sampleSum)
   {
     sampleSum += node->samples;
+    std::vector<Quadtree*> visitedNodes, neighbors;
     node->visited = true;
     if (sampleSum > MIN_NODE_NEIGHBOR_SAMPLE_SUM) {
       node->visited = false;
-      return true;
+      return neighbors;
     }
     int x1 = node->minBounds.x, x2 = node->maxBounds.x;
     int y1 = node->minBounds.y, y2 = node->maxBounds.y;
-    std::vector<Quadtree*> visitedNodes;
 
     for (Quadtree *neighbor : nodes) {
       if (neighbor->visited) {
@@ -110,21 +110,19 @@ public:
       int yn1 = neighbor->minBounds.y, yn2 = neighbor->maxBounds.y;
       if (((x1 == xn1) || (x2 == xn1) || (x1 == xn2) || (x2 == xn2)) &&
           ((y1 == yn1) || (y2 == yn1) || (y1 == yn2) || (y2 == yn2))) {
-        if (hasNeighbor(neighbor, sampleSum)) {
-          for (Quadtree* visitedNode : visitedNodes) {
+        neighbors.push_back(node);
+        std::vector<Quadtree*> neighborNeighbors = getNeighbors(neighbor, sampleSum);
+        neighbors.insert(neighbors.end(), neighborNeighbors.begin(), neighborNeighbors.end());
+        if (sampleSum < MIN_NODE_NEIGHBOR_SAMPLE_SUM) {
+          for (Quadtree* visitedNode : neighborNeighbors) {
             visitedNode->visited = false;
           }
           node->visited = false;
-          return true;
-        } else {
-          visitedNodes.push_back(neighbor);
+          return neighbors;
         }
       }
     }
-    for (Quadtree* visitedNode : visitedNodes) {
-      visitedNode->visited = false;
-    }
-    return false;
+    return neighbors;
   }
 
   const double getAngleToNormal(const cv::Vec3d vector) const

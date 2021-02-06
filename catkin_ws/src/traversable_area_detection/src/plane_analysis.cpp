@@ -295,14 +295,24 @@ void PlaneAnalysis::removeStandAloneNodes(std::vector<Plane>& planes)
   for (Plane& plane : planes) {
     for (size_t i = 0; i < plane.nodes.size(); i++) {
       Quadtree *node = plane.nodes[i];
+      std::vector<Quadtree *> nodesToRemove, neighbors;
       int sampleSum = 0;
       if (node->samples < MIN_INDEPENDENT_NODE_SIZE) {
-        if (!plane.hasNeighbor(node, sampleSum)) {
+        auto j = find(nodesToRemove.begin(), nodesToRemove.end(), node);
+        if (j == nodesToRemove.end()) {
+          neighbors = plane.getNeighbors(node, sampleSum);
+        } else {
+          neighbors.clear();
+          nodesToRemove.erase(j);
+        }
+        if (sampleSum < MIN_NODE_NEIGHBOR_SAMPLE_SUM) {
+          if (neighbors.size() > 0) {
+            nodesToRemove.insert(nodesToRemove.begin(), neighbors.begin(), neighbors.end());
+          }
           plane.samples -= node->samples;
           plane.rootRepresentativeness -= node->rootRepresentativeness;
           plane.nodes.erase(plane.nodes.begin() + i);
           i--;
-          continue;
         }
       }
     }
