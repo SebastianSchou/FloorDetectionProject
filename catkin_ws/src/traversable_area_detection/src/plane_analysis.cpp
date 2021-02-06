@@ -5,8 +5,6 @@
 #include <traversable_area_detection/HeightArea.h>
 #include <traversable_area_detection/Point.h>
 
-#define MAX_POINT_PLANE_DISTANCE 0.1   // [m]
-#define ACCEPTABLE_BEST_POINT_FIT 0.01 // [m]
 #define MAX_INCLINE_DEGREES 8.0                                 // [degrees]
 #define MAX_INCLINE_RADIANS MAX_INCLINE_DEGREES * CV_PI / 180.0 // [radians]
 #define MIN_FLOOR_DISTANCE 0.5                                  // [m]
@@ -412,7 +410,7 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
 
       // Loop over planes and find the plane which fits best
       Plane *bestFit;
-      double minDistance = MAX_POINT_PLANE_DISTANCE,
+      double minDistance = MAX_DISTANCE_DIFFERENCE,
       minAngle = 2 * MAX_ANGLE_DIFFERENCE;
       bool isObject = true;
       for (Plane& plane : planes) {
@@ -422,9 +420,7 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
         double dist = std::abs((plane.position - point).dot(
                                  plane.normal));
 
-        if (dist < MAX_POINT_PLANE_DISTANCE) {
-          isObject = false;
-
+        if (dist < MAX_DISTANCE_DIFFERENCE) {
           // Get the distance to the closest node
           double distanceToNode = MAX_DISTANCE_TO_NODE;
           for (Quadtree *node : plane.nodes) {
@@ -438,6 +434,7 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
           if (distanceToNode >= MAX_DISTANCE_TO_NODE) {
             continue;
           }
+          isObject = false;
 
           // Add a scale. The further away a point is, the more precise does
           // the points normal vector has to be
@@ -462,7 +459,7 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
 
           // If the distance is below the acceptable value, skip the rest
           // of the planes
-          if ((dist < ACCEPTABLE_BEST_POINT_FIT) &&
+          if ((dist < MAX_DISTANCE_DIFFERENCE / 2.0) &&
               (angle < MAX_ANGLE_DIFFERENCE)) {
             break;
           }
@@ -471,7 +468,7 @@ Plane PlaneAnalysis::computePlanePoints(std::vector<Plane>& planes,
 
       // Insert point in plane
       cv::Vec2i point2d(r, c);
-      if ((minDistance < MAX_POINT_PLANE_DISTANCE)) {
+      if ((minDistance < MAX_DISTANCE_DIFFERENCE)) {
         bestFit->setImagePoint(point2d);
         bestFit->insert2dPoint(point2d, mutex);
       } else if (isObject) {
