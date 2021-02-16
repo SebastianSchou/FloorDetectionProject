@@ -153,25 +153,16 @@ void Quadtree::computeCovariance()
   cv::Matx33d cov(3, 3, CV_64F);
 
   cov(X, X) = (sat->satXX.getArea(minBounds, maxBounds) -
-               2 * mean[X] * sat->satX.getArea(minBounds, maxBounds) +
                samples * mean[X] * mean[X]) / (samples - 1);
   cov(Y, Y) = (sat->satYY.getArea(minBounds, maxBounds) -
-               2 * mean[Y] * sat->satY.getArea(minBounds, maxBounds) +
                samples * mean[Y] * mean[Y]) / (samples - 1);
   cov(Z, Z) = (sat->satZZ.getArea(minBounds, maxBounds) -
-               2 * mean[Z] * sat->satZ.getArea(minBounds, maxBounds) +
                samples * mean[Z] * mean[Z]) / (samples - 1);
   cov(X, Y) = (sat->satXY.getArea(minBounds, maxBounds) -
-               mean[X] * sat->satY.getArea(minBounds, maxBounds) -
-               mean[Y] * sat->satX.getArea(minBounds, maxBounds) +
                samples * mean[X] * mean[Y]) / (samples - 1);
   cov(X, Z) = (sat->satXZ.getArea(minBounds, maxBounds) -
-               mean[X] * sat->satZ.getArea(minBounds, maxBounds) -
-               mean[Z] * sat->satX.getArea(minBounds, maxBounds) +
                samples * mean[X] * mean[Z]) / (samples - 1);
   cov(Y, Z) = (sat->satYZ.getArea(minBounds, maxBounds) -
-               mean[Y] * sat->satZ.getArea(minBounds, maxBounds) -
-               mean[Z] * sat->satY.getArea(minBounds, maxBounds) +
                samples * mean[Y] * mean[Z]) / (samples - 1);
   cov(Y, X) = cov(X, Y);
   cov(Z, X) = cov(X, Z);
